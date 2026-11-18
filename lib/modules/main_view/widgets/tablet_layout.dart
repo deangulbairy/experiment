@@ -249,6 +249,7 @@ class _TabletLayoutState extends State<MainTabletLayout> {
       '/MangaLibrary',
       '/AnimeLibrary',
       '/NovelLibrary',
+      '/MoviesTV',
       '/history',
       '/updates',
       '/browse',

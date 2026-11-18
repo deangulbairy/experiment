@@ -26,6 +26,7 @@ final navigationItems = {
   "/MangaLibrary": "Manga",
   "/AnimeLibrary": "Anime",
   "/NovelLibrary": "Novel",
+  "/MoviesTV": "Movies & TV",
   "/updates": "Updates",
   "/history": "History",
   "/browse": "Browse",

@@ -157,6 +157,19 @@ class NavDestinationBuilders {
         ),
       );
     }
+    if (dest.contains("/MoviesTV")) {
+      destinations[dest.indexOf("/MoviesTV")] = NavigationRailDestination(
+        padding: isTv
+            ? const EdgeInsets.symmetric(vertical: ShioriSpace.s8)
+            : null,
+        selectedIcon: const Icon(Icons.movie_rounded),
+        icon: const Icon(Icons.movie_outlined),
+        label: const Padding(
+          padding: EdgeInsets.only(top: ShioriSpace.s4),
+          child: Text('Movies'),
+        ),
+      );
+    }
     if (dest.contains("/updates")) {
       destinations[dest.indexOf("/updates")] = NavigationRailDestination(
         padding: isTv
@@ -319,6 +332,13 @@ class NavDestinationBuilders {
         icon: const Icon(Symbols.auto_stories_rounded),
         label: l10n.novel,
         tooltip: showTooltip ? l10n.double_tap_search_hint(l10n.novel) : '',
+      );
+    }
+    if (dest.contains("/MoviesTV")) {
+      destinations[dest.indexOf("/MoviesTV")] = NavigationDestination(
+        selectedIcon: const Icon(Icons.movie_rounded),
+        icon: const Icon(Icons.movie_outlined),
+        label: 'Movies',
       );
     }
     if (dest.contains("/updates")) {

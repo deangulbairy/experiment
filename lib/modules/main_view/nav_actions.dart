@@ -16,10 +16,10 @@ import 'package:mangayomi/utils/item_type_filters.dart';
 
 final libLocationRegex = RegExp(r"^/(Manga|Anime|Novel)Library$");
 
-/// Nav destinations kept off the anime-only TV layout (the manga & novel
-/// libraries). True means "keep this destination".
+/// Nav destinations kept off the anime-only TV layout (the manga, novel, and
+/// movie/series destinations). True means "keep this destination".
 bool isNotHiddenLibOnTv(String nav) =>
-    nav != "/MangaLibrary" && nav != "/NovelLibrary";
+    nav != "/MangaLibrary" && nav != "/NovelLibrary" && nav != "/MoviesTV";
 
 /// The ItemType a nav destination maps to, or null for destinations with no
 /// single content type to scope a global search to (Updates, History,

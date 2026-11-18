@@ -54,6 +54,7 @@ import 'package:mangayomi/modules/browse/global_search/global_search_screen.dart
 import 'package:mangayomi/modules/main_view/main_screen.dart';
 import 'package:mangayomi/modules/history/history_screen.dart';
 import 'package:mangayomi/modules/library/library_screen.dart';
+import 'package:mangayomi/modules/stremio/movies_tv_screen.dart';
 import 'package:mangayomi/modules/manga/detail/manga_detail_main.dart';
 import 'package:mangayomi/modules/manga/home/manga_home_screen.dart';
 import 'package:mangayomi/modules/manga/reader/reader_view.dart';
@@ -82,6 +83,7 @@ const _shellBranchRoutes = [
   '/MangaLibrary',
   '/AnimeLibrary',
   '/NovelLibrary',
+  '/MoviesTV',
   '/trackerLibrary',
   '/history',
   '/updates',
@@ -212,6 +214,9 @@ class RouterNotifier extends ChangeNotifier {
             builder: (search) =>
                 LibraryScreen(itemType: ItemType.novel, search: search),
           ),
+        ),
+        _branch(
+          _genericRoute(name: "MoviesTV", child: const MoviesTvScreen()),
         ),
         _branch(
           _genericRoute<String?>(

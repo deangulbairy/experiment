@@ -107,7 +107,7 @@ final navGroupingProvider = NotifierProvider<NavGroupingState, bool>(
 );
 
 /// The destinations the user has visible, in their order: hidden items and
-/// the anime-only TV layout's dropped libraries removed.
+/// the anime-only TV layout's dropped libraries and Movies & TV removed.
 final visibleNavDestinationsProvider = Provider<List<String>>((ref) {
   final order = ref.watch(navigationOrderStateProvider);
   final hidden = ref.watch(hideItemsStateProvider);
@@ -115,7 +115,11 @@ final visibleNavDestinationsProvider = Provider<List<String>>((ref) {
   return order
       .where((d) => !hidden.contains(d))
       .where(
-        (d) => !animeOnly || (d != '/MangaLibrary' && d != '/NovelLibrary'),
+        (d) =>
+            !animeOnly ||
+            (d != '/MangaLibrary' &&
+                d != '/NovelLibrary' &&
+                d != '/MoviesTV'),
       )
       .toList();
 });

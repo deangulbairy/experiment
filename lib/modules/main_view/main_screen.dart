@@ -59,7 +59,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     _navigationOrder = ref.read(navigationOrderStateProvider);
     final hiddenItems = ref.read(hideItemsStateProvider);
 
-    // On the anime-only TV layout, never land on a hidden manga/novel library.
+    // On the anime-only TV layout, never land on a hidden non-anime page.
     final order = ref.read(animeOnlyTvModeProvider)
         ? _navigationOrder.where(isNotHiddenLibOnTv).toList()
         : _navigationOrder;

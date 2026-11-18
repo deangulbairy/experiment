@@ -95,6 +95,7 @@ class MainMobileBottomNavigation extends StatelessWidget {
       '/MangaLibrary',
       '/AnimeLibrary',
       '/NovelLibrary',
+      '/MoviesTV',
       '/history',
       '/updates',
       '/browse',

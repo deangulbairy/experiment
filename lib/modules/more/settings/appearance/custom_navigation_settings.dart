@@ -121,6 +121,7 @@ String _label(AppLocalizations l10n, String route) => switch (route) {
   "/MangaLibrary" => l10n.manga,
   "/AnimeLibrary" => l10n.anime,
   "/NovelLibrary" => l10n.novel,
+  "/MoviesTV" => "Movies & TV",
   "/updates" => l10n.updates,
   "/history" => l10n.history,
   "/browse" => l10n.browse,

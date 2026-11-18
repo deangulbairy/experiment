@@ -1,0 +1,225 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:mangayomi/services/stremio_addon_service.dart';
+import 'package:mangayomi/services/torrent_server.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+
+class StremioPlayerPage extends StatefulWidget {
+  const StremioPlayerPage({
+    super.key,
+    required this.stream,
+    required this.title,
+  });
+
+  final StremioStream stream;
+  final String title;
+
+  @override
+  State<StremioPlayerPage> createState() => _StremioPlayerPageState();
+}
+
+class _StremioPlayerPageState extends State<StremioPlayerPage> {
+  final Player _player = Player();
+  late final VideoController _controller = VideoController(_player);
+  bool _loading = true;
+  String? _error;
+  String? _torrentHash;
+
+  @override
+  void initState() {
+    super.initState();
+    _openStream();
+  }
+
+  Future<void> _openStream() async {
+    try {
+      final stream = widget.stream;
+      var url = stream.url ?? '';
+      if (url.startsWith('magnet:')) {
+        url = await _openTorrent(stream.magnetUri);
+      } else if ((url.isEmpty || !url.startsWith(RegExp(r'https?://'))) &&
+          stream.infoHash?.isNotEmpty == true) {
+        url = await _openTorrent(stream.magnetUri);
+      }
+      if (url.isEmpty) {
+        throw const StremioAddonException('This stream does not contain a playable URL.');
+      }
+      await _player.open(Media(url, httpHeaders: stream.headers));
+      if (!mounted) return;
+      setState(() => _loading = false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = error.toString();
+      });
+    }
+  }
+
+  Future<String> _openTorrent(String magnet) async {
+    if (magnet.isEmpty) {
+      throw const StremioAddonException('The torrent stream is missing its info hash.');
+    }
+    final (videos, hash) = await MTorrentServer().getTorrentPlaylist(
+      magnet,
+      null,
+      sources: widget.stream.trackers,
+    );
+    if (videos.isEmpty) {
+      throw const StremioAddonException('No playable video files were found in this torrent.');
+    }
+    _torrentHash = hash ?? widget.stream.infoHash;
+    final index = widget.stream.fileIndex;
+    if (index != null && index >= 0 && index < videos.length) {
+      return videos[index].url;
+    }
+    return videos.first.url;
+  }
+
+  @override
+  void dispose() {
+    final infoHash = _torrentHash;
+    unawaited(() async {
+      await _player.stop();
+      await _player.dispose();
+      if (infoHash != null && infoHash.isNotEmpty) {
+        await MTorrentServer().removeTorrent(infoHash);
+      }
+    }());
+    super.dispose();
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+      body: Center(
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Video(
+                controller: _controller,
+                fit: BoxFit.contain,
+                controls: (_) => const SizedBox.shrink(),
+              ),
+              if (_loading)
+                const Center(child: CircularProgressIndicator(color: Colors.white)),
+              if (_error != null)
+                ColoredBox(
+                  color: Colors.black87,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.white, size: 40),
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton.icon(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.arrow_back_rounded),
+                            label: const Text('Back to streams'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              if (!_loading && _error == null)
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black87],
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 28, 12, 8),
+                      child: StreamBuilder<bool>(
+                        stream: _player.stream.playing,
+                        builder: (context, snapshot) {
+                          final isPlaying = snapshot.data ?? false;
+                          return StreamBuilder<Duration>(
+                            stream: _player.stream.position,
+                            builder: (context, positionSnapshot) =>
+                                StreamBuilder<Duration>(
+                                  stream: _player.stream.duration,
+                                  builder: (context, durationSnapshot) {
+                                    final position = positionSnapshot.data ?? Duration.zero;
+                                    final duration = durationSnapshot.data ?? Duration.zero;
+                                    final max = duration.inMilliseconds.toDouble();
+                                    final value = position.inMilliseconds
+                                        .toDouble()
+                                        .clamp(0, max > 0 ? max : 1)
+                                        .toDouble();
+                                    return Row(
+                                      children: [
+                                        IconButton(
+                                          color: Colors.white,
+                                          onPressed: () => isPlaying
+                                              ? _player.pause()
+                                              : _player.play(),
+                                          icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                                        ),
+                                        Text(
+                                          _formatDuration(position),
+                                          style: const TextStyle(color: Colors.white),
+                                        ),
+                                        Expanded(
+                                          child: Slider(
+                                            min: 0,
+                                            max: max > 0 ? max : 1,
+                                            value: value,
+                                            onChanged: duration == Duration.zero
+                                                ? null
+                                                : (value) => _player.seek(
+                                                      Duration(milliseconds: value.round()),
+                                                    ),
+                                          ),
+                                        ),
+                                        Text(
+                                          _formatDuration(duration),
+                                          style: const TextStyle(color: Colors.white),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

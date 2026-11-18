@@ -187,6 +187,7 @@ class NavigationOrderState extends _$NavigationOrderState {
     '/MangaLibrary',
     '/AnimeLibrary',
     '/NovelLibrary',
+    '/MoviesTV',
     '/updates',
     '/history',
     '/browse',
