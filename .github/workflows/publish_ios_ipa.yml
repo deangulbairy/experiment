@@ -1,0 +1,82 @@
+name: Publish iOS IPA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - pubspec.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: macos-26
+    env:
+      # Keep in sync with release.yml: newer Rust currently fails to link on
+      # the Xcode image used by the iOS release build.
+      CARGOKIT_TOOLCHAIN: "1.99.1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          channel: stable
+          architecture: x64
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.CARGOKIT_TOOLCHAIN }}
+          targets: aarch64-apple-ios,x86_64-apple-ios
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2.9.3
+        with:
+          workspaces: rust
+          cache-on-failure: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build and package unsigned IPA
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version: \([^+]*\).*/\1/p' pubspec.yaml)"
+          if [[ -z "$version" ]]; then
+            echo "Could not read the app version from pubspec.yaml" >&2
+            exit 1
+          fi
+
+          flutter build ios --release --no-codesign
+          mkdir -p build/ios/iphoneos/Payload
+          mv build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
+          ipa="build/ios/iphoneos/Mangayomi-v${version}-ios.ipa"
+          (cd build/ios/iphoneos && zip -qr "$(basename "$ipa")" Payload)
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=ios-v${version}" >> "$GITHUB_OUTPUT"
+          echo "ipa=$ipa" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: ncipollo/release-action@v1.21.0
+        with:
+          tag: ${{ steps.package.outputs.tag }}
+          commit: ${{ github.sha }}
+          artifacts: ${{ steps.package.outputs.ipa }}
+          artifactContentType: application/octet-stream
+          generateReleaseNotes: true
+          allowUpdates: true
+
+  update-altstore-source:
+    needs: build-and-publish
+    permissions:
+      contents: write
+    uses: ./.github/workflows/update_sideloading_source.yml

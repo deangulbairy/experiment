@@ -2,89 +2,69 @@
  <img width=200px height=200px src="assets/app_icons/icon-red.png"/>
 </p>
 
-<h1 align="center"> Mangayomi </h1>
+<h1 align="center">Mangayomi — Stremio fork</h1>
 
 <div align="center">
 
- [![GitHub downloads](https://img.shields.io/github/downloads/kodjodevf/mangayomi/total?label=downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/kodjodevf/mangayomi/releases)
-![star](https://img.shields.io/github/stars/kodjodevf/mangayomi)
- [![Discord server](https://img.shields.io/discord/1157628512077893666.svg?label=&labelColor=6A7EC2&color=7389D8&logo=discord&logoColor=FFFFFF)](https://discord.com/invite/EjfBuYahsP) 
+[![Fork releases](https://img.shields.io/github/downloads/deangulbairy/experiment/total?label=fork%20downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/deangulbairy/experiment/releases)
+[![Upstream Mangayomi](https://img.shields.io/github/stars/kodjodevf/mangayomi)](https://github.com/kodjodevf/mangayomi)
 
-
-Mangayomi is an open-source Flutter app for reading manga, novels, and watching animes across multiple platforms.
+An independent Mangayomi fork adding Stremio movie and TV browsing alongside the existing manga, novel, and anime features.
 </div>
 
-> [!WARNING]
-> **Official Warning**: Mangayomi does not have an official website. This GitHub repository ([kodjodevf/mangayomi](https://github.com/kodjodevf/mangayomi)) and our official [Discord server](https://discord.com/invite/EjfBuYahsP) are the **only official sources** for Mangayomi. Always download official releases from our GitHub repository.
+> [!NOTE]
+> This is an independent fork maintained at [deangulbairy/experiment](https://github.com/deangulbairy/experiment). It is not an official Mangayomi release. Use this repository's releases and AltStore source for the Stremio-enabled build.
 
-## Features
+## What's included
 
-<div align="left">
+This fork keeps Mangayomi's manga, webtoon, comic, novel, and anime features, and adds a **Movies & TV** section powered by Stremio-compatible add-ons:
 
-Features include:
-* Reading manga, webtoons, comics, novels, animes, movies, and more.
-* Local reading of content.
-* A configurable reader with multiple viewers, reading directions and other settings.
-* Tracker support for anime and manga: [MyAnimeList](https://myanimelist.net/), [AniList](https://anilist.co/), [SIMKL](https://simkl.com/), [trakt](https://app.trakt.tv/) and [Kitsu](https://kitsu.io/) support.
-* Categories to organize your library.
-* Light and dark themes.
-* Create backups locally to read offline or to your desired cloud service.
+- Starts with Cinemeta for movie and series catalogs.
+- Add and remove add-ons by manifest URL; installed add-ons are saved on the device.
+- Browse movie and series catalogs, and use search or catalog filters when an add-on supports them.
+- Open title details and series episodes, then request streams from installed streaming add-ons.
+- Play direct HTTP(S) streams and magnet/torrent streams in the app.
 
-</div>
+Stremio support currently covers movie and series catalogs, metadata, and streams. Catalogs and playable sources depend on the add-ons you install; add-ons that expose other Stremio resource types are not shown in this section.
+
+The rest of Mangayomi includes local reading, configurable readers, anime and manga tracking (MyAnimeList, AniList, SIMKL, Trakt, and Kitsu), library categories, themes, and local backups.
 
 ## Download
-Get the app from our [releases page](https://github.com/kodjodevf/mangayomi/releases).
 
-## iOS Sideloading Sources
-<a href="https://intradeus.github.io/http-protocol-redirector?r=altstore://source?url=https://raw.githubusercontent.com/kodjodevf/mangayomi/refs/heads/main/repo/source.json"><img alt="AltStore Source" src="repo/images/buttons/altstore_button.png" width="150"></a>
+Download builds from the [fork's Releases page](https://github.com/deangulbairy/experiment/releases). The iOS IPA is published by the `Publish iOS IPA` GitHub Actions workflow after the app version changes. Its AltStore source is updated from the fork's releases.
+
+## iOS sideloading sources
+
+Add the fork's source to AltStore, Feather, or SideStore. The source lists the fork-built IPA and receives updates when a new iOS release is published.
+
+<a href="https://intradeus.github.io/http-protocol-redirector?r=altstore://source?url=https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/source.json"><img alt="Add to AltStore" src="repo/images/buttons/altstore_button.png" width="150"></a>
 &nbsp;
-<a href="https://intradeus.github.io/http-protocol-redirector?r=feather://source/https://raw.githubusercontent.com/kodjodevf/mangayomi/refs/heads/main/repo/source.json"><img alt="Feather Source" src="repo/images/buttons/feather_button.png" width="150"></a>
+<a href="https://intradeus.github.io/http-protocol-redirector?r=feather://source/https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/source.json"><img alt="Add to Feather" src="repo/images/buttons/feather_button.png" width="150"></a>
 &nbsp;
-<a href="https://intradeus.github.io/http-protocol-redirector?r=sidestore://source?url=https://raw.githubusercontent.com/kodjodevf/mangayomi/refs/heads/main/repo/source.json"><img alt="Sidestore Source" src="repo/images/buttons/sidestore_button.png" width="150"></a>
+<a href="https://intradeus.github.io/http-protocol-redirector?r=sidestore://source?url=https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/source.json"><img alt="Add to SideStore" src="repo/images/buttons/sidestore_button.png" width="150"></a>
 &nbsp;
-<a href="https://raw.githubusercontent.com/kodjodevf/mangayomi/refs/heads/main/repo/source.json"><img alt="Direct URL Source" src="repo/images/buttons/url_button.png" width="150"></a>
+<a href="https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/source.json"><img alt="Open source JSON" src="repo/images/buttons/url_button.png" width="150"></a>
 
-Note: Only future releases (> 0.5.2) will be signed (and therefore have AltStore/SideStore compatibility).
+The IPA is packaged without a distribution certificate. AltStore/SideStore signs it for your device during sideloading. The source is [repo/source.json](https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/source.json).
 
-# Contributing
+## Contributing
 
-Contributions are welcome!
+Contributions are welcome. For Mangayomi extension development, see the upstream guides for [Dart sources](https://github.com/kodjodevf/mangayomi-extensions/blob/main/CONTRIBUTING-DART.md) and [JavaScript sources](https://github.com/kodjodevf/mangayomi-extensions/blob/main/CONTRIBUTING-JS.md).
 
-To get started with extension development, see [CONTRIBUTING-DART.md](https://github.com/kodjodevf/mangayomi-extensions/blob/main/CONTRIBUTING-DART.md) for create sources in Dart or [CONTRIBUTING-JS.md](https://github.com/kodjodevf/mangayomi-extensions/blob/main/CONTRIBUTING-JS.md) for create sources in JavaScript.
+## Building from source
 
-## Using flutter_rust_bridge
-
-To run and build this app, you need to have
-[Flutter SDK](https://docs.flutter.dev/get-started/install)
-and [Rust toolchain](https://www.rust-lang.org/tools/install)
-installed on your system.
-You can check that your system is ready with the commands below.
-Note that all the Flutter subcomponents should be installed.
+Install the [Flutter SDK](https://docs.flutter.dev/get-started/install), the [Rust toolchain](https://www.rust-lang.org/tools/install), and the `flutter_rust_bridge_codegen` CLI:
 
 ```bash
 rustc --version
 flutter doctor
-```
-
-You also need to have the CLI tool for flutter_rust_bridge ready.
-
-```bash
-cargo install 'flutter_rust_bridge_codegen'
-```
-
-run the following command:
-
-```bash
+cargo install flutter_rust_bridge_codegen
 flutter_rust_bridge_codegen generate
-```
-
-Now you can run and build this app just like any other Flutter projects.
-
-```bash
+flutter pub get
 flutter run
 ```
 
-
+The iOS IPA workflow runs on a macOS GitHub Actions runner. It builds the iOS app without a developer distribution certificate, packages the IPA, publishes a GitHub Release, and refreshes the AltStore source.
 
 ## License
 
@@ -101,8 +81,7 @@ flutter run
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-    
 
 ## Disclaimer
 
-Mangayomi is not hosting any kind of content and the developer(s) of this application does not have any affiliation with the content providers that are freely available in the internet.
+Mangayomi does not host content and is not affiliated with content providers. Only install add-ons and access media you are authorized to use.
