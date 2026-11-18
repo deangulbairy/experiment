@@ -531,11 +531,19 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
   List<StremioStream> _streams = const [];
   String? _streamError;
   String? _selectedVideoTitle;
+  String? _selectedEpisodeId;
+  int _streamRequestId = 0;
   bool _loadingStreams = false;
 
-  Future<void> _loadStreams(String id, String title) async {
+  Future<void> _loadStreams(
+    String id,
+    String title, {
+    bool isEpisode = false,
+  }) async {
+    final requestId = ++_streamRequestId;
     setState(() {
       _selectedVideoTitle = title;
+      _selectedEpisodeId = isEpisode ? id : null;
       _loadingStreams = true;
       _streamError = null;
       _streams = const [];
@@ -546,7 +554,7 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
         widget.mediaType,
         id,
       );
-      if (!mounted) return;
+      if (!mounted || requestId != _streamRequestId) return;
       setState(() {
         _streams = streams;
         _loadingStreams = false;
@@ -556,7 +564,7 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
         }
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || requestId != _streamRequestId) return;
       setState(() {
         _loadingStreams = false;
         _streamError = error.toString();
@@ -565,12 +573,49 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
   }
 
   Future<void> _play(StremioStream stream) async {
-    await Navigator.of(context).push(
+    await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute<void>(
         builder: (_) => StremioPlayerPage(
           stream: stream,
           title: _selectedVideoTitle ?? widget.meta.name,
         ),
+      ),
+    );
+  }
+
+  Widget _buildStreamResults(BuildContext context) {
+    if (!_loadingStreams && _streamError == null && _streams.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_loadingStreams)
+            const Center(child: CircularProgressIndicator())
+          else if (_streamError != null)
+            Text(
+              _streamError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            )
+          else ...[
+            Text('Streams', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ..._streams.map((stream) => Card(
+                  child: ListTile(
+                    leading: Icon(stream.isTorrent
+                        ? Icons.tune_rounded
+                        : Icons.play_arrow_rounded),
+                    title: Text(stream.displayTitle,
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(stream.addonName),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _play(stream),
+                  ),
+                )),
+          ],
+        ],
       ),
     );
   }
@@ -634,46 +679,47 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
           ],
           const SizedBox(height: 20),
           if (widget.mediaType == StremioMediaType.movie)
-            FilledButton.icon(
-              onPressed: () => _loadStreams(meta.id, meta.name),
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text('Find streams'),
-            )
+            ...[
+              FilledButton.icon(
+                onPressed: () => _loadStreams(meta.id, meta.name),
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('Find streams'),
+              ),
+              _buildStreamResults(context),
+            ]
           else ...[
             Text('Episodes', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (episodes.isEmpty)
               const Text('No episodes were provided by the metadata add-on.')
             else
-              ...episodes.map((episode) => Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.play_circle_outline_rounded),
-                      title: Text(episode.label),
-                      onTap: () => _loadStreams(episode.id, episode.label),
+              ...episodes.map((episode) {
+                final selected = _selectedEpisodeId == episode.id;
+                return Column(
+                  children: [
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.play_circle_outline_rounded),
+                        title: Text(episode.label),
+                        trailing: selected && _loadingStreams
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.chevron_right_rounded),
+                        onTap: episode.id.isEmpty
+                            ? null
+                            : () => _loadStreams(
+                                  episode.id,
+                                  episode.label,
+                                  isEpisode: true,
+                                ),
+                      ),
                     ),
-                  )),
-          ],
-          if (_loadingStreams) ...[
-            const SizedBox(height: 18),
-            const Center(child: CircularProgressIndicator()),
-          ],
-          if (_streamError != null) ...[
-            const SizedBox(height: 12),
-            Text(_streamError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ],
-          if (_streams.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            Text('Streams', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ..._streams.map((stream) => Card(
-                  child: ListTile(
-                    leading: Icon(stream.isTorrent ? Icons.tune_rounded : Icons.play_arrow_rounded),
-                    title: Text(stream.displayTitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(stream.addonName),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _play(stream),
-                  ),
-                )),
+                    if (selected) _buildStreamResults(context),
+                  ],
+                );
+              }),
           ],
         ],
       ),

@@ -1,8 +1,16 @@
 import 'dart:async';
 
+import 'package:dart_cast/dart_cast.dart' show CastDevice;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mangayomi/services/stremio_addon_service.dart';
 import 'package:mangayomi/services/torrent_server.dart';
+import 'package:mangayomi/modules/stremio/cast/cast_controller.dart';
+import 'package:mangayomi/modules/stremio/cast/cast_media_builder.dart';
+import 'package:mangayomi/modules/stremio/cast/cast_sheet.dart';
+import 'package:mangayomi/repositories/settings_repository.dart';
+import 'package:mangayomi/utils/platform_utils.dart';
+import 'package:mangayomi/utils/system_ui.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -22,14 +30,29 @@ class StremioPlayerPage extends StatefulWidget {
 
 class _StremioPlayerPageState extends State<StremioPlayerPage> {
   final Player _player = Player();
+  final CastController _cast = CastController.instance;
   late final VideoController _controller = VideoController(_player);
   bool _loading = true;
   String? _error;
   String? _torrentHash;
+  String? _playbackUrl;
+  Duration _position = Duration.zero;
+  StreamSubscription<Duration>? _positionSubscription;
 
   @override
   void initState() {
     super.initState();
+    _cast.attach();
+    _positionSubscription = _player.stream.position.listen((position) {
+      _position = position;
+    });
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive));
+    if (isMobile && (settingsRepository.current.forceLandscapePlayer ?? false)) {
+      unawaited(SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]));
+    }
     _openStream();
   }
 
@@ -46,6 +69,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
       if (url.isEmpty) {
         throw const StremioAddonException('This stream does not contain a playable URL.');
       }
+      _playbackUrl = url;
       await _player.open(Media(url, httpHeaders: stream.headers));
       if (!mounted) return;
       setState(() => _loading = false);
@@ -78,8 +102,45 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
     return videos.first.url;
   }
 
+  Future<void> _showCastSheet() => showCastSheet(
+        context,
+        controller: _cast,
+        onDeviceSelected: (device) {
+          Navigator.of(context).pop();
+          unawaited(_castToDevice(device));
+        },
+        onStopCasting: () => unawaited(_cast.end()),
+      );
+
+  Future<void> _castToDevice(CastDevice device) async {
+    final url = _playbackUrl;
+    if (url == null) return;
+    final started = await _cast.start(
+      device,
+      () => buildCastMedia(
+        url: url,
+        isLocal: false,
+        headers: widget.stream.headers,
+        title: widget.title,
+        start: _position,
+      ),
+    );
+    if (started) await _player.pause();
+  }
+
   @override
   void dispose() {
+    unawaited(_positionSubscription?.cancel());
+    _cast.detach();
+    restoreSystemUI();
+    if (isMobile) {
+      unawaited(SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]));
+    }
     final infoHash = _torrentHash;
     unawaited(() async {
       await _player.stop();
@@ -106,6 +167,12 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        actions: [
+          CastButton(
+            controller: _cast,
+            onPressed: _loading || _playbackUrl == null ? null : _showCastSheet,
+          ),
+        ],
       ),
       body: Center(
         child: AspectRatio(
@@ -148,74 +215,101 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
                   ),
                 ),
               if (!_loading && _error == null)
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: DecoratedBox(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black87],
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 28, 12, 8),
-                      child: StreamBuilder<bool>(
-                        stream: _player.stream.playing,
-                        builder: (context, snapshot) {
-                          final isPlaying = snapshot.data ?? false;
-                          return StreamBuilder<Duration>(
-                            stream: _player.stream.position,
-                            builder: (context, positionSnapshot) =>
-                                StreamBuilder<Duration>(
-                                  stream: _player.stream.duration,
-                                  builder: (context, durationSnapshot) {
-                                    final position = positionSnapshot.data ?? Duration.zero;
-                                    final duration = durationSnapshot.data ?? Duration.zero;
-                                    final max = duration.inMilliseconds.toDouble();
-                                    final value = position.inMilliseconds
-                                        .toDouble()
-                                        .clamp(0, max > 0 ? max : 1)
-                                        .toDouble();
-                                    return Row(
-                                      children: [
-                                        IconButton(
-                                          color: Colors.white,
-                                          onPressed: () => isPlaying
-                                              ? _player.pause()
-                                              : _player.play(),
-                                          icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                                        ),
-                                        Text(
-                                          _formatDuration(position),
-                                          style: const TextStyle(color: Colors.white),
-                                        ),
-                                        Expanded(
-                                          child: Slider(
-                                            min: 0,
-                                            max: max > 0 ? max : 1,
-                                            value: value,
-                                            onChanged: duration == Duration.zero
-                                                ? null
-                                                : (value) => _player.seek(
-                                                      Duration(milliseconds: value.round()),
-                                                    ),
-                                          ),
-                                        ),
-                                        Text(
-                                          _formatDuration(duration),
-                                          style: const TextStyle(color: Colors.white),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
+                ListenableBuilder(
+                  listenable: _cast,
+                  builder: (context, _) => _cast.isCasting
+                      ? Align(
+                          alignment: Alignment.bottomCenter,
+                          child: SafeArea(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Text(
+                                'Casting to ${_cast.device?.name ?? 'TV'}. Tap the cast icon for playback controls.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        )
+                      : Align(
+                          alignment: Alignment.bottomCenter,
+                          child: DecoratedBox(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black87],
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 28, 12, 8),
+                              child: StreamBuilder<bool>(
+                                stream: _player.stream.playing,
+                                builder: (context, snapshot) {
+                                  final isPlaying = snapshot.data ?? false;
+                                  return StreamBuilder<Duration>(
+                                    stream: _player.stream.position,
+                                    builder: (context, positionSnapshot) =>
+                                        StreamBuilder<Duration>(
+                                      stream: _player.stream.duration,
+                                      builder: (context, durationSnapshot) {
+                                        final position =
+                                            positionSnapshot.data ?? Duration.zero;
+                                        final duration =
+                                            durationSnapshot.data ?? Duration.zero;
+                                        final max = duration.inMilliseconds.toDouble();
+                                        final value = position.inMilliseconds
+                                            .toDouble()
+                                            .clamp(0, max > 0 ? max : 1)
+                                            .toDouble();
+                                        return Row(
+                                          children: [
+                                            IconButton(
+                                              color: Colors.white,
+                                              onPressed: () => isPlaying
+                                                  ? _player.pause()
+                                                  : _player.play(),
+                                              icon: Icon(isPlaying
+                                                  ? Icons.pause
+                                                  : Icons.play_arrow),
+                                            ),
+                                            Text(
+                                              _formatDuration(position),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Slider(
+                                                min: 0,
+                                                max: max > 0 ? max : 1,
+                                                value: value,
+                                                onChanged: duration == Duration.zero
+                                                    ? null
+                                                    : (value) => _player.seek(
+                                                          Duration(
+                                                            milliseconds:
+                                                                value.round(),
+                                                          ),
+                                                        ),
+                                              ),
+                                            ),
+                                            Text(
+                                              _formatDuration(duration),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
             ],
           ),
         ),
