@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:mangayomi/modules/stremio/stremio_player_page.dart';
+import 'package:mangayomi/services/http/custom_extended_image_provider.dart';
 import 'package:mangayomi/services/stremio_library_service.dart';
 import 'package:shiori/shiori.dart';
 
@@ -68,7 +69,9 @@ class _StremioContinueShelfState extends State<StremioContinueShelf> {
                 child: ShioriCoverTile(
                   subtitle: subtitle,
                   cover: ShioriCover(
-                    image: entry.poster,
+                    image: entry.poster.isEmpty
+                        ? null
+                        : CustomExtendedNetworkImageProvider(entry.poster),
                     title: entry.cardTitle,
                     progress: entry.progress,
                     onTap: () => Navigator.of(

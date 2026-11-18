@@ -379,6 +379,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
                             ),
                           ),
                         ),
+                ),
             ],
           ),
         ),
