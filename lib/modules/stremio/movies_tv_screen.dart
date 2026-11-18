@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mangayomi/modules/stremio/stremio_player_page.dart';
 import 'package:mangayomi/services/stremio_addon_service.dart';
 
@@ -158,111 +159,7 @@ class _MoviesTvScreenState extends State<MoviesTvScreen> {
     );
   }
 
-  Future<String?> _showAddDialog(BuildContext dialogContext) async {
-    final controller = TextEditingController();
-    try {
-      return await showDialog<String>(
-        context: dialogContext,
-        builder: (context) => AlertDialog(
-          title: const Text('Add Stremio add-on'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: TextInputType.url,
-            decoration: const InputDecoration(
-              labelText: 'Manifest URL',
-              hintText: 'https://addon.example/manifest.json',
-            ),
-            onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('Add'),
-            ),
-          ],
-        ),
-      );
-    } finally {
-      controller.dispose();
-    }
-  }
-
-  Future<void> _manageAddons() async {
-    var urls = await _service.installedManifestUrls();
-    var addons = await _service.loadAddons();
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Stremio add-ons'),
-          content: SizedBox(
-            width: 460,
-            height: 360,
-            child: urls.isEmpty
-                ? const Center(child: Text('No add-ons installed.'))
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: urls.length,
-                    itemBuilder: (context, index) {
-                      final url = urls[index];
-                      final addon = addons.where((e) => e.manifestUrl == url).firstOrNull;
-                      final isDefault = url == stremioCinemetaManifest;
-                      return ListTile(
-                        dense: true,
-                        title: Text(addon?.name ?? Uri.tryParse(url)?.host ?? url),
-                        subtitle: Text(url, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        trailing: isDefault
-                            ? const Icon(Icons.lock_outline)
-                            : IconButton(
-                                tooltip: 'Remove add-on',
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () async {
-                                  await _service.removeManifestUrl(url);
-                                  urls = await _service.installedManifestUrls();
-                                  addons = await _service.loadAddons();
-                                  setDialogState(() {});
-                                },
-                              ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                final url = await _showAddDialog(dialogContext);
-                if (url == null || url.isEmpty) return;
-                try {
-                  await _service.addManifestUrl(url);
-                  urls = await _service.installedManifestUrls();
-                  addons = await _service.loadAddons();
-                  setDialogState(() {});
-                } catch (error) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(error.toString())),
-                    );
-                  }
-                }
-              },
-              child: const Text('Add add-on'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Done'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (mounted) await _refresh();
-  }
+  void _manageAddons() => context.push('/stremioAddons');
 
   @override
   Widget build(BuildContext context) {
@@ -578,6 +475,16 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
         builder: (_) => StremioPlayerPage(
           stream: stream,
           title: _selectedVideoTitle ?? widget.meta.name,
+          mediaType: widget.mediaType,
+          mediaId: widget.mediaType == StremioMediaType.series
+              ? _selectedEpisodeId ?? widget.meta.id
+              : widget.meta.id,
+          parentId: widget.meta.id,
+          parentTitle: widget.meta.name,
+          poster: widget.meta.poster,
+          episodeTitle: widget.mediaType == StremioMediaType.series
+              ? _selectedVideoTitle
+              : null,
         ),
       ),
     );
@@ -626,7 +533,9 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
     final episodes = meta.episodes
       ..sort((a, b) {
         final season = a.season.compareTo(b.season);
-        return season != 0 ? season : a.episode.compareTo(b.episode);
+        if (season != 0) return season;
+        final episode = a.episode.compareTo(b.episode);
+        return episode != 0 ? episode : a.id.compareTo(b.id);
       });
 
     return Scaffold(
