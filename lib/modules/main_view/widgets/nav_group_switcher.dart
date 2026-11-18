@@ -60,7 +60,7 @@ class NavGroupSwitcher extends ConsumerWidget {
       ),
       '/AnimeLibrary' => ShioriSegment(
         value: r,
-        label: l10n.anime,
+        label: 'Watch',
         icon: Symbols.video_library_rounded,
       ),
       '/NovelLibrary' => ShioriSegment(

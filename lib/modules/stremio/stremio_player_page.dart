@@ -4,6 +4,7 @@ import 'package:dart_cast/dart_cast.dart' show CastDevice;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mangayomi/services/stremio_addon_service.dart';
+import 'package:mangayomi/services/stremio_library_service.dart';
 import 'package:mangayomi/services/torrent_server.dart';
 import 'package:mangayomi/modules/stremio/cast/cast_controller.dart';
 import 'package:mangayomi/modules/stremio/cast/cast_media_builder.dart';
@@ -19,10 +20,24 @@ class StremioPlayerPage extends StatefulWidget {
     super.key,
     required this.stream,
     required this.title,
+    required this.mediaType,
+    required this.mediaId,
+    required this.parentId,
+    required this.parentTitle,
+    required this.poster,
+    this.episodeTitle,
+    this.initialPosition = Duration.zero,
   });
 
   final StremioStream stream;
   final String title;
+  final StremioMediaType mediaType;
+  final String mediaId;
+  final String parentId;
+  final String parentTitle;
+  final String poster;
+  final String? episodeTitle;
+  final Duration initialPosition;
 
   @override
   State<StremioPlayerPage> createState() => _StremioPlayerPageState();
@@ -37,14 +52,27 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
   String? _torrentHash;
   String? _playbackUrl;
   Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
   StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<Duration>? _durationSubscription;
+  Timer? _progressTimer;
+  bool _addedToLibrary = false;
 
   @override
   void initState() {
     super.initState();
     _cast.attach();
+    _position = widget.initialPosition;
     _positionSubscription = _player.stream.position.listen((position) {
       _position = position;
+    });
+    _durationSubscription = _player.stream.duration.listen((duration) {
+      _duration = duration;
+    });
+    _cast.position.addListener(_onCastPositionChanged);
+    _cast.duration.addListener(_onCastDurationChanged);
+    _progressTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      unawaited(_saveLibraryProgress());
     });
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive));
     if (isMobile && (settingsRepository.current.forceLandscapePlayer ?? false)) {
@@ -70,9 +98,17 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
         throw const StremioAddonException('This stream does not contain a playable URL.');
       }
       _playbackUrl = url;
-      await _player.open(Media(url, httpHeaders: stream.headers));
+      await _player.open(
+        Media(
+          url,
+          httpHeaders: stream.headers,
+          start: widget.initialPosition,
+        ),
+      );
       if (!mounted) return;
       setState(() => _loading = false);
+      _addedToLibrary = true;
+      unawaited(_saveLibraryProgress());
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -128,9 +164,42 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
     if (started) await _player.pause();
   }
 
+  Future<void> _saveLibraryProgress() async {
+    if (!_addedToLibrary) return;
+    try {
+      await StremioLibraryService.instance.savePlayback(
+        mediaType: widget.mediaType,
+        mediaId: widget.mediaId,
+        parentId: widget.parentId,
+        title: widget.title,
+        parentTitle: widget.parentTitle,
+        poster: widget.poster,
+        episodeTitle: widget.episodeTitle,
+        stream: widget.stream,
+        position: _position,
+        duration: _duration,
+      );
+    } catch (_) {}
+  }
+
+  void _onCastPositionChanged() {
+    if (_cast.isCasting) _position = _cast.position.value;
+  }
+
+  void _onCastDurationChanged() {
+    if (_cast.isCasting && _cast.duration.value > Duration.zero) {
+      _duration = _cast.duration.value;
+    }
+  }
+
   @override
   void dispose() {
     unawaited(_positionSubscription?.cancel());
+    unawaited(_durationSubscription?.cancel());
+    _cast.position.removeListener(_onCastPositionChanged);
+    _cast.duration.removeListener(_onCastDurationChanged);
+    _progressTimer?.cancel();
+    unawaited(_saveLibraryProgress());
     _cast.detach();
     restoreSystemUI();
     if (isMobile) {

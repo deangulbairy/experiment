@@ -92,6 +92,13 @@ class BrowseSScreen extends ConsumerWidget {
                   l10n.manage_novel_repo_urls,
                   ItemType.novel,
                 ),
+              if (!animeOnly)
+                ShioriSettingRow(
+                  title: 'Movies & TV add-ons',
+                  subtitle: 'Manage Movie/TV add-on URLs',
+                  trailing: const Icon(Symbols.chevron_forward_rounded),
+                  onTap: () => context.push('/stremioAddons'),
+                ),
               ShioriSwitchRow(
                 title: l10n.check_for_extension_updates,
                 value: checkForExtensionUpdates,

@@ -170,7 +170,7 @@ class LibraryAppBar extends ConsumerWidget implements PreferredSizeWidget {
                       isGroupedNavRoute(ref, libraryRouteFor(itemType)) &&
                               !collapsed
                           ? navGroupTitle(context, libraryRouteFor(itemType))
-                          : itemType.localized(l10n),
+                          : itemType.localizedLibraryTitle(l10n),
                       style: context.shiori.text.screenTitle.copyWith(
                         color: context.shiori.color.fg,
                       ),

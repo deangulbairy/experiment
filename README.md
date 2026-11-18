@@ -23,9 +23,12 @@ This fork keeps Mangayomi's manga, webtoon, comic, novel, and anime features, an
 - Add and remove add-ons by manifest URL; installed add-ons are saved on the device.
 - Browse movie and series catalogs, and use search or catalog filters when an add-on supports them.
 - Open title details and series episodes, then request streams from installed streaming add-ons.
+- List series episodes in season and episode order, with the earliest episode first.
 - Episode stream results appear under the episode you select, with a visible loading state.
 - Play direct HTTP(S) streams and magnet/torrent streams in an immersive player that covers the tab bar, like anime playback.
+- Add movies and shows to the **Watch** library automatically when playback starts; progress is saved on-device so playback can resume later. A show's card resumes its most recently played episode.
 - Cast Stremio streams to a Chromecast on the same Wi-Fi network, with a playback remote and support for stream request headers.
+- Manage movie and TV add-on manifest URLs in Browse settings, alongside the Manga, Anime, and Novel repository controls.
 
 Stremio support currently covers movie and series catalogs, metadata, and streams. Catalogs and playable sources depend on the add-ons you install; add-ons that expose other Stremio resource types are not shown in this section.
 

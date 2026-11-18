@@ -122,17 +122,17 @@ class NavDestinationBuilders {
             : null,
         selectedIcon: navTooltipIcon(
           showTooltip,
-          l10n.double_tap_search_hint(l10n.anime),
+          l10n.double_tap_search_hint('Watch'),
           const Icon(Symbols.video_library_rounded),
         ),
         icon: navTooltipIcon(
           showTooltip,
-          l10n.double_tap_search_hint(l10n.anime),
+          l10n.double_tap_search_hint('Watch'),
           const Icon(Symbols.video_library_rounded),
         ),
         label: Padding(
           padding: const EdgeInsets.only(top: ShioriSpace.s4),
-          child: Text(l10n.anime),
+          child: const Text('Watch'),
         ),
       );
     }
@@ -322,8 +322,8 @@ class NavDestinationBuilders {
       destinations[dest.indexOf("/AnimeLibrary")] = NavigationDestination(
         selectedIcon: const Icon(Symbols.video_library_rounded),
         icon: const Icon(Symbols.video_library_rounded),
-        label: l10n.anime,
-        tooltip: showTooltip ? l10n.double_tap_search_hint(l10n.anime) : '',
+        label: 'Watch',
+        tooltip: showTooltip ? l10n.double_tap_search_hint('Watch') : '',
       );
     }
     if (dest.contains("/NovelLibrary")) {
