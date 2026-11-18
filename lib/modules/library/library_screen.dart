@@ -33,6 +33,7 @@ import 'package:mangayomi/modules/widgets/restore_bottom_padding.dart';
 import 'package:mangayomi/providers/l10n_providers.dart';
 import 'package:mangayomi/modules/library/widgets/active_filter_chips.dart';
 import 'package:mangayomi/modules/library/widgets/continue_shelf.dart';
+import 'package:mangayomi/modules/library/widgets/stremio_continue_shelf.dart';
 import 'package:mangayomi/modules/library/widgets/library_entry_utils.dart';
 import 'package:mangayomi/modules/library/utils/last_category.dart';
 import 'package:mangayomi/repositories/settings_repository.dart';
@@ -632,7 +633,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
         title: Text(
           isGroupedNavRoute(ref, route)
               ? navGroupTitle(context, route)
-              : widget.itemType.localized(context.l10n),
+              : widget.itemType.localizedLibraryTitle(context.l10n),
           style: tokens.text.screenTitle.copyWith(color: tokens.color.fg),
         ),
       ),
@@ -687,6 +688,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                 children: [
                   NavGroupSwitcher(route: route),
                   ContinueShelf(itemType: widget.itemType),
+                  if (widget.itemType == ItemType.anime)
+                    const StremioContinueShelf(),
                   ActiveFilterChips(
                     itemType: widget.itemType,
                     settings: _settings,
