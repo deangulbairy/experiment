@@ -15,8 +15,8 @@
       "developerName": "deangulbairy",
       "subtitle": "Read manga and novels, watch anime, movies, and TV",
       "version": "0.9.97",
-      "versionDate": "2026-11-18T00:00:00Z",
-      "versionDescription": "Adds Stremio movie and series catalogs, add-on manifests, and in-app stream playback.",
+      "versionDate": "2026-11-18T18:58:00Z",
+      "versionDescription": "**Full Changelog**: https://github.com/deangulbairy/experiment/commits/ios\u2022v0.9.97",
       "downloadURL": "https://github.com/deangulbairy/experiment/releases/download/ios-v0.9.97/Mangayomi-v0.9.97-ios.ipa",
       "localizedDescription": "Mangayomi with Stremio-compatible movie and series catalogs, add-ons, and playback.",
       "iconURL": "https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/images/icons/icon_default.webp",
@@ -30,9 +30,10 @@
       "versions": [
         {
           "version": "0.9.97",
-          "date": "2026-11-18T00:00:00Z",
-          "localizedDescription": "Adds Stremio movie and series catalogs, add-on manifests, and in-app stream playback.",
-          "downloadURL": "https://github.com/deangulbairy/experiment/releases/download/ios-v0.9.97/Mangayomi-v0.9.97-ios.ipa"
+          "date": "2026-11-18T18:58:00Z",
+          "localizedDescription": "**Full Changelog**: https://github.com/deangulbairy/experiment/commits/ios\u2022v0.9.97",
+          "downloadURL": "https://github.com/deangulbairy/experiment/releases/download/ios-v0.9.97/Mangayomi-v0.9.97-ios.ipa",
+          "size": 115703743
         }
       ],
       "appPermissions": {
@@ -51,8 +52,21 @@
           }
         ],
         "privacy": []
-      }
+      },
+      "size": 115703743
     }
   ],
-  "news": []
+  "news": [
+    {
+      "appID": "com.kodjodevf.mangayomi",
+      "title": "ios-v0.9.97 - 18 Nov",
+      "identifier": "release-ios-v0.9.97",
+      "caption": "An update for the Stremio-enabled Mangayomi fork is available!",
+      "date": "2026-11-18T18:58:00Z",
+      "tintColor": "EF4444",
+      "imageURL": "https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/images/news/update_default.webp",
+      "notify": true,
+      "url": "https://github.com/deangulbairy/experiment/releases/tag/ios-v0.9.97"
+    }
+  ]
 }
