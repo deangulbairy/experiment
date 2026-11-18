@@ -13,6 +13,10 @@ extension ItemTypeLocalization on ItemType {
     }
   }
 
+  /// The Anime library also holds Stremio movies and series.
+  String localizedLibraryTitle(AppLocalizations l10n) =>
+      this == ItemType.anime ? 'Watch' : localized(l10n);
+
   String localizedSources(AppLocalizations l10n) {
     switch (this) {
       case ItemType.manga:
