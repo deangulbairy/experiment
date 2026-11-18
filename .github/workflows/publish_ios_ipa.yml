@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build-and-publish:
-    runs-on: macos-15-intel
+    runs-on: macos-26-intel
     env:
       # Use the Rust version pinned by release.yml to avoid its newer-Xcode
       # linker failure.
