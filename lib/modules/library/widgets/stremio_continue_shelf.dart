@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mangayomi/modules/stremio/stremio_player_page.dart';
 import 'package:mangayomi/services/http/custom_extended_image_provider.dart';
 import 'package:mangayomi/services/stremio_library_service.dart';
@@ -74,22 +75,18 @@ class _StremioContinueShelfState extends State<StremioContinueShelf> {
                         : CustomExtendedNetworkImageProvider(entry.poster),
                     title: entry.cardTitle,
                     progress: entry.progress,
-                    onTap: () => Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    ).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => StremioPlayerPage(
-                          stream: entry.stream,
-                          title: entry.playbackTitle,
-                          mediaType: entry.mediaType,
-                          mediaId: entry.mediaId,
-                          parentId: entry.parentId,
-                          parentTitle: entry.parentTitle,
-                          poster: entry.poster,
-                          episodeTitle: entry.episodeTitle,
-                          initialPosition: entry.position,
-                        ),
+                    onTap: () => context.push(
+                      '/stremioPlayer',
+                      extra: StremioPlayerRequest(
+                        stream: entry.stream,
+                        title: entry.playbackTitle,
+                        mediaType: entry.mediaType,
+                        mediaId: entry.mediaId,
+                        parentId: entry.parentId,
+                        parentTitle: entry.parentTitle,
+                        poster: entry.poster,
+                        episodeTitle: entry.episodeTitle,
+                        initialPosition: entry.position,
                       ),
                     ),
                   ),

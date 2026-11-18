@@ -25,14 +25,15 @@ This fork keeps Mangayomi's manga, webtoon, comic, novel, and anime features, an
 - Open title details and series episodes, then request streams from installed streaming add-ons.
 - List series episodes in season and episode order, with the earliest episode first.
 - Episode stream results appear under the episode you select, with a visible loading state.
-- Play direct HTTP(S) streams and magnet/torrent streams in an immersive player that covers the tab bar, like anime playback.
-- Add movies and shows to the **Watch** library automatically when playback starts; progress is saved on-device so playback can resume later. A show's card resumes its most recently played episode.
-- Cast Stremio streams to a Chromecast on the same Wi-Fi network, with a playback remote and support for stream request headers.
+- Play direct HTTP(S) streams and magnet/torrent streams in a full-screen player that uses the same video output as anime playback and shows playback errors instead of silently remaining black.
+- Anime episodes, movies, and shows are added to the **Watch** library when playback starts; progress is saved on-device so playback can resume later. A show's card resumes its most recently played episode.
+- The **Watch** activity combines anime history with the movie and TV continue-watching shelf.
+- Cast anime, movies, and shows to a Chromecast on the same Wi-Fi network, with a playback remote and support for stream request headers.
 - Manage movie and TV add-on manifest URLs in Browse settings, alongside the Manga, Anime, and Novel repository controls.
 
 Stremio support currently covers movie and series catalogs, metadata, and streams. Catalogs and playable sources depend on the add-ons you install; add-ons that expose other Stremio resource types are not shown in this section.
 
-On iOS, allow Mangayomi to access the local network when prompted so it can discover Chromecast devices. Chromecast support is adapted from [IStoleThis/chromecast-testing](https://github.com/IStoleThis/chromecast-testing); see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+On iOS, allow Mangayomi to access the local network when prompted so it can discover Chromecast devices. If discovery was denied, enable it under **Settings → Privacy & Security → Local Network**. Chromecast support is adapted from [IStoleThis/chromecast-testing](https://github.com/IStoleThis/chromecast-testing); see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 The rest of Mangayomi includes local reading, configurable readers, anime and manga tracking (MyAnimeList, AniList, SIMKL, Trakt, and Kitsu), library categories, themes, and local backups.
 

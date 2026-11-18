@@ -50,7 +50,7 @@ Stream<MdnsServiceInfo> bonsoirLookup(String serviceType) {
             case BonsoirDiscoveryServiceResolvedEvent():
               final BonsoirService? service = event.service;
               if (service == null || controller.isClosed) return;
-              final host = _preferIpv4(service.hostAddresses);
+              final host = _preferReachableAddress(service.hostAddresses);
               if (host == null) return;
               controller.add(
                 MdnsServiceInfo(
@@ -76,9 +76,16 @@ Stream<MdnsServiceInfo> bonsoirLookup(String serviceType) {
 
 /// A Chromecast is reached over a plain TLS socket, which can't take an IPv6
 /// link-local address without a scope id, so prefer IPv4.
-String? _preferIpv4(List<String> addresses) {
+String? _preferReachableAddress(List<String> addresses) {
   for (final address in addresses) {
     if (InternetAddress.tryParse(address)?.type == InternetAddressType.IPv4) {
+      return address;
+    }
+  }
+  // Some TVs advertise only IPv6. Keep those visible too; dart:io can connect
+  // to global IPv6 addresses, while the most common IPv4 path stays preferred.
+  for (final address in addresses) {
+    if (InternetAddress.tryParse(address)?.type == InternetAddressType.IPv6) {
       return address;
     }
   }

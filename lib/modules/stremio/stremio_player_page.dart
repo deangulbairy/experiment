@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:dart_cast/dart_cast.dart' show CastDevice;
 import 'package:flutter/material.dart';
@@ -14,6 +15,30 @@ import 'package:mangayomi/utils/platform_utils.dart';
 import 'package:mangayomi/utils/system_ui.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+
+class StremioPlayerRequest {
+  const StremioPlayerRequest({
+    required this.stream,
+    required this.title,
+    required this.mediaType,
+    required this.mediaId,
+    required this.parentId,
+    required this.parentTitle,
+    required this.poster,
+    this.episodeTitle,
+    this.initialPosition = Duration.zero,
+  });
+
+  final StremioStream stream;
+  final String title;
+  final StremioMediaType mediaType;
+  final String mediaId;
+  final String parentId;
+  final String parentTitle;
+  final String poster;
+  final String? episodeTitle;
+  final Duration initialPosition;
+}
 
 class StremioPlayerPage extends StatefulWidget {
   const StremioPlayerPage({
@@ -46,7 +71,16 @@ class StremioPlayerPage extends StatefulWidget {
 class _StremioPlayerPageState extends State<StremioPlayerPage> {
   final Player _player = Player();
   final CastController _cast = CastController.instance;
-  late final VideoController _controller = VideoController(_player);
+  late final VideoController _controller = VideoController(
+    _player,
+    configuration: VideoControllerConfiguration(
+      hwdec: settingsRepository.current.hwdecMode ?? 'auto',
+      enableHardwareAcceleration:
+          settingsRepository.current.enableHardwareAcceleration ??
+          !(Platform.isMacOS || Platform.isWindows),
+      vo: Platform.isAndroid ? 'gpu' : 'libmpv',
+    ),
+  );
   bool _loading = true;
   String? _error;
   String? _torrentHash;
@@ -55,6 +89,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
   Duration _duration = Duration.zero;
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration>? _durationSubscription;
+  StreamSubscription<String>? _errorSubscription;
   Timer? _progressTimer;
   bool _addedToLibrary = false;
 
@@ -68,6 +103,14 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
     });
     _durationSubscription = _player.stream.duration.listen((duration) {
       _duration = duration;
+    });
+    _errorSubscription = _player.stream.error.listen((error) {
+      final message = error.trim();
+      if (message.isEmpty || !mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Playback failed: $message';
+      });
     });
     _cast.position.addListener(_onCastPositionChanged);
     _cast.duration.addListener(_onCastDurationChanged);
@@ -86,6 +129,12 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
 
   Future<void> _openStream() async {
     try {
+      if (mounted) {
+        setState(() {
+          _loading = true;
+          _error = null;
+        });
+      }
       final stream = widget.stream;
       var url = stream.url ?? '';
       if (url.startsWith('magnet:')) {
@@ -104,6 +153,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
           httpHeaders: stream.headers,
           start: widget.initialPosition,
         ),
+        play: true,
       );
       if (!mounted) return;
       setState(() => _loading = false);
@@ -196,6 +246,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
   void dispose() {
     unawaited(_positionSubscription?.cancel());
     unawaited(_durationSubscription?.cancel());
+    unawaited(_errorSubscription?.cancel());
     _cast.position.removeListener(_onCastPositionChanged);
     _cast.duration.removeListener(_onCastDurationChanged);
     _progressTimer?.cancel();
@@ -232,157 +283,200 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        actions: [
-          CastButton(
-            controller: _cast,
-            onPressed: _loading || _playbackUrl == null ? null : _showCastSheet,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Video(
+            controller: _controller,
+            fit: BoxFit.contain,
+            controls: (_) => const SizedBox.shrink(),
           ),
-        ],
-      ),
-      body: Center(
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Video(
-                controller: _controller,
-                fit: BoxFit.contain,
-                controls: (_) => const SizedBox.shrink(),
+          SafeArea(
+            bottom: false,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.black87, Colors.transparent],
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Back to streams',
+                        onPressed: () => Navigator.of(context).pop(),
+                        color: Colors.white,
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(color: Colors.white),
+                        ),
+                      ),
+                      CastButton(
+                        controller: _cast,
+                        onPressed: _loading || _playbackUrl == null
+                            ? null
+                            : _showCastSheet,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              if (_loading)
-                const Center(child: CircularProgressIndicator(color: Colors.white)),
-              if (_error != null)
-                ColoredBox(
-                  color: Colors.black87,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.white, size: 40),
-                          const SizedBox(height: 12),
-                          Text(
-                            _error!,
+            ),
+          ),
+          if (_loading)
+            const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+          if (_error != null)
+            ColoredBox(
+              color: Colors.black87,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.white,
+                        size: 40,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: _openStream,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Try this stream again'),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        label: const Text('Back to streams'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (!_loading && _error == null)
+            ListenableBuilder(
+              listenable: _cast,
+              builder: (context, _) => _cast.isCasting
+                  ? Align(
+                      alignment: Alignment.bottomCenter,
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text(
+                            'Casting to ${_cast.device?.name ?? 'TV'}. Tap the cast icon for playback controls.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.white),
                           ),
-                          const SizedBox(height: 12),
-                          TextButton.icon(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.arrow_back_rounded),
-                            label: const Text('Back to streams'),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-              if (!_loading && _error == null)
-                ListenableBuilder(
-                  listenable: _cast,
-                  builder: (context, _) => _cast.isCasting
-                      ? Align(
-                          alignment: Alignment.bottomCenter,
-                          child: SafeArea(
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Text(
-                                'Casting to ${_cast.device?.name ?? 'TV'}. Tap the cast icon for playback controls.',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        )
-                      : Align(
-                          alignment: Alignment.bottomCenter,
-                          child: DecoratedBox(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Colors.transparent, Colors.black87],
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 28, 12, 8),
-                              child: StreamBuilder<bool>(
-                                stream: _player.stream.playing,
-                                builder: (context, snapshot) {
-                                  final isPlaying = snapshot.data ?? false;
-                                  return StreamBuilder<Duration>(
-                                    stream: _player.stream.position,
-                                    builder: (context, positionSnapshot) =>
-                                        StreamBuilder<Duration>(
-                                      stream: _player.stream.duration,
-                                      builder: (context, durationSnapshot) {
-                                        final position =
-                                            positionSnapshot.data ?? Duration.zero;
-                                        final duration =
-                                            durationSnapshot.data ?? Duration.zero;
-                                        final max = duration.inMilliseconds.toDouble();
-                                        final value = position.inMilliseconds
-                                            .toDouble()
-                                            .clamp(0, max > 0 ? max : 1)
-                                            .toDouble();
-                                        return Row(
-                                          children: [
-                                            IconButton(
-                                              color: Colors.white,
-                                              onPressed: () => isPlaying
-                                                  ? _player.pause()
-                                                  : _player.play(),
-                                              icon: Icon(isPlaying
-                                                  ? Icons.pause
-                                                  : Icons.play_arrow),
-                                            ),
-                                            Text(
-                                              _formatDuration(position),
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            Expanded(
-                                              child: Slider(
-                                                min: 0,
-                                                max: max > 0 ? max : 1,
-                                                value: value,
-                                                onChanged: duration == Duration.zero
-                                                    ? null
-                                                    : (value) => _player.seek(
-                                                          Duration(
-                                                            milliseconds:
-                                                                value.round(),
-                                                          ),
-                                                        ),
-                                              ),
-                                            ),
-                                            Text(
-                                              _formatDuration(duration),
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+                    )
+                  : Align(
+                      alignment: Alignment.bottomCenter,
+                      child: DecoratedBox(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black87],
                           ),
                         ),
-                ),
-            ],
-          ),
-        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 28, 12, 8),
+                          child: StreamBuilder<bool>(
+                            stream: _player.stream.playing,
+                            builder: (context, snapshot) {
+                              final isPlaying = snapshot.data ?? false;
+                              return StreamBuilder<Duration>(
+                                stream: _player.stream.position,
+                                builder: (context, positionSnapshot) =>
+                                    StreamBuilder<Duration>(
+                                  stream: _player.stream.duration,
+                                  builder: (context, durationSnapshot) {
+                                    final position =
+                                        positionSnapshot.data ?? Duration.zero;
+                                    final duration =
+                                        durationSnapshot.data ?? Duration.zero;
+                                    final max =
+                                        duration.inMilliseconds.toDouble();
+                                    final value = position.inMilliseconds
+                                        .toDouble()
+                                        .clamp(0, max > 0 ? max : 1)
+                                        .toDouble();
+                                    return Row(
+                                      children: [
+                                        IconButton(
+                                          color: Colors.white,
+                                          onPressed: () => isPlaying
+                                              ? _player.pause()
+                                              : _player.play(),
+                                          icon: Icon(
+                                            isPlaying
+                                                ? Icons.pause
+                                                : Icons.play_arrow,
+                                          ),
+                                        ),
+                                        Text(
+                                          _formatDuration(position),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Slider(
+                                            min: 0,
+                                            max: max > 0 ? max : 1,
+                                            value: value,
+                                            onChanged: duration == Duration.zero
+                                                ? null
+                                                : (value) => _player.seek(
+                                                    Duration(
+                                                      milliseconds:
+                                                          value.round(),
+                                                    ),
+                                                  ),
+                                          ),
+                                        ),
+                                        Text(
+                                          _formatDuration(duration),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+        ],
       ),
     );
   }

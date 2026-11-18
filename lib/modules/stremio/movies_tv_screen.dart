@@ -470,22 +470,21 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
   }
 
   Future<void> _play(StremioStream stream) async {
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute<void>(
-        builder: (_) => StremioPlayerPage(
-          stream: stream,
-          title: _selectedVideoTitle ?? widget.meta.name,
-          mediaType: widget.mediaType,
-          mediaId: widget.mediaType == StremioMediaType.series
-              ? _selectedEpisodeId ?? widget.meta.id
-              : widget.meta.id,
-          parentId: widget.meta.id,
-          parentTitle: widget.meta.name,
-          poster: widget.meta.poster,
-          episodeTitle: widget.mediaType == StremioMediaType.series
-              ? _selectedVideoTitle
-              : null,
-        ),
+    await context.push(
+      '/stremioPlayer',
+      extra: StremioPlayerRequest(
+        stream: stream,
+        title: _selectedVideoTitle ?? widget.meta.name,
+        mediaType: widget.mediaType,
+        mediaId: widget.mediaType == StremioMediaType.series
+            ? _selectedEpisodeId ?? widget.meta.id
+            : widget.meta.id,
+        parentId: widget.meta.id,
+        parentTitle: widget.meta.name,
+        poster: widget.meta.poster,
+        episodeTitle: widget.mediaType == StremioMediaType.series
+            ? _selectedVideoTitle
+            : null,
       ),
     );
   }

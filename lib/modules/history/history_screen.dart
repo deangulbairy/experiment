@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mangayomi/l10n/generated/app_localizations.dart';
 import 'package:mangayomi/modules/library/widgets/base_library_tab_screen.dart';
+import 'package:mangayomi/modules/library/widgets/stremio_continue_shelf.dart';
 import 'package:mangayomi/modules/widgets/custom_sliver_grouped_list_view.dart';
 
 import 'package:mangayomi/repositories/chapter_repository.dart';
@@ -175,9 +176,17 @@ class _HistoryTabState extends ConsumerState<HistoryTab>
           final c = chapterById[e.chapterId];
           return c != null && mangaById[c.mangaId] != null;
         }).toList();
+        final showMoviesAndTv =
+            widget.itemType == ItemType.anime && widget.query.isEmpty;
+        final mediaShelf = showMoviesAndTv
+            ? <Widget>[
+                const SliverToBoxAdapter(child: StremioContinueShelf()),
+              ]
+            : <Widget>[];
         if (entries.isNotEmpty) {
           return CustomScrollView(
             slivers: [
+              ...mediaShelf,
               CustomSliverGroupedListView<History, String>(
                 elements: entries,
                 groupBy: (element) => dateFormat(
@@ -243,6 +252,22 @@ class _HistoryTabState extends ConsumerState<HistoryTab>
                 itemComparator: (item1, item2) =>
                     item1.date!.compareTo(item2.date!),
                 order: GroupedListOrder.DESC,
+              ),
+            ],
+          );
+        }
+        if (showMoviesAndTv) {
+          return CustomScrollView(
+            slivers: [
+              ...mediaShelf,
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: ShioriEmptyState(
+                  icon: Symbols.history_rounded,
+                  title: l10n.nothing_read_recently,
+                  actionLabel: l10n.library,
+                  onAction: () => context.go(libraryRouteFor(widget.itemType)),
+                ),
               ),
             ],
           );

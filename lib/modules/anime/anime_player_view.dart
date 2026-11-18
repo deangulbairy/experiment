@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riv;
 import 'package:mangayomi/services/discord_rpc.dart';
 import 'package:mangayomi/repositories/chapter_repository.dart';
+import 'package:mangayomi/repositories/manga_repository.dart';
 import 'package:mangayomi/models/chapter.dart';
 import 'package:mangayomi/models/custom_button.dart';
 import 'package:mangayomi/models/settings.dart';
@@ -17,6 +18,10 @@ import 'package:mangayomi/modules/anime/mixins/anime_mpv_bridge_mixin.dart';
 import 'package:mangayomi/modules/anime/mixins/anime_player_controls_mixin.dart';
 import 'package:mangayomi/modules/anime/mixins/anime_player_settings_mixin.dart';
 import 'package:mangayomi/modules/anime/mixins/anime_track_selection_mixin.dart';
+import 'package:dart_cast/dart_cast.dart' show CastDevice, CastMedia;
+import 'package:mangayomi/modules/stremio/cast/cast_controller.dart';
+import 'package:mangayomi/modules/stremio/cast/cast_media_builder.dart';
+import 'package:mangayomi/modules/stremio/cast/cast_sheet.dart';
 import 'package:mangayomi/modules/anime/providers/anime_player_controller_provider.dart';
 import 'package:mangayomi/modules/anime/providers/auto_play_next_provider.dart';
 import 'package:mangayomi/modules/anime/utils/playback_media.dart';
@@ -274,6 +279,11 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
   VoidCallback get controlsOpenTvSettingsPanel =>
       () => setState(() => _tvSettingsOpen = true);
   @override
+  Widget get controlsCastAction => CastButton(
+    controller: _cast,
+    onPressed: _openCastSheet,
+  );
+  @override
   Player get mpvBridgePlayer => _player;
   @override
   bool get mpvUseLibass => useLibass;
@@ -498,8 +508,13 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
 
   late final StreamSubscription<Duration> _currentPositionSub;
   late final StreamSubscription<String> _playerErrorSub;
+  StreamSubscription<void>? _castFinishedSub;
+  StreamSubscription<bool>? _castLocalPlayingSub;
   StreamSubscription<Tracks>? _tracksSub;
   StreamSubscription<Track>? _trackSub;
+  final CastController _cast = CastController.instance;
+  bool _wasCasting = false;
+  bool _addedAnimeToLibrary = false;
 
   late final StreamSubscription<Duration> _currentTotalDurationSub = _player
       .stream
@@ -741,6 +756,7 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
     _completed;
     // ignore: unnecessary_statements
     _currentTotalDurationSub;
+    _initCast();
     loadAndroidFont().then((_) {
       if (!mounted) return;
       _openMedia(_video.value!, _streamController.getCurrentPosition());
@@ -785,6 +801,7 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
   Future<void> _openMedia(VideoPrefs prefs, [Duration? position]) async {
     final start = position ?? _currentPosition.value;
     resetAudioFallbackState(resetRequestedLanguage: true);
+    final casting = _cast.isCasting;
     await _player.open(
       playbackMedia(
         prefs.videoTrack!.id,
@@ -792,7 +809,9 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
         httpHeaders: prefs.headers,
         start: start,
       ),
+      play: !casting,
     );
+    if (casting) unawaited(_castLoad(prefs, start));
     if (start > Duration.zero) {
       unawaited(
         _player.stream.duration
@@ -804,6 +823,108 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
     }
     unawaited(syncActiveAudioTrackFromMpv());
     unawaited(syncActiveSubtitleTrackFromMpv());
+  }
+
+  void _initCast() {
+    _cast.attach();
+    _wasCasting = _cast.isCasting;
+    _cast.addListener(_onCastChanged);
+    _cast.position.addListener(_onCastPosition);
+    _castFinishedSub = _cast.onFinished.listen(
+      (_) => _handlePlaybackCompleted(true),
+    );
+    _castLocalPlayingSub = _player.stream.playing.listen((playing) {
+      if (playing) unawaited(_addAnimeToLibrary());
+      // Keep the phone's decoder quiet while the TV owns playback. The cast
+      // sheet remains the remote for play, pause, seeking, and volume.
+      if (playing && _cast.isCasting) unawaited(_player.pause());
+    });
+  }
+
+  void _openCastSheet() {
+    showCastSheet(
+      context,
+      controller: _cast,
+      onDeviceSelected: (device) {
+        Navigator.of(context).pop();
+        unawaited(_castToDevice(device));
+      },
+      onStopCasting: () => unawaited(_cast.end()),
+    );
+  }
+
+  Future<void> _castToDevice(CastDevice device) async {
+    final prefs = _video.value;
+    if (prefs?.videoTrack == null) return;
+    final wasPlaying = _player.state.playing;
+    await _player.pause();
+    final started = await _cast.start(
+      device,
+      () => _buildAnimeCastMedia(prefs!, _currentPosition.value),
+    );
+    if (!started && wasPlaying && mounted) await _player.play();
+  }
+
+  Future<CastMedia> _buildAnimeCastMedia(
+    VideoPrefs prefs,
+    Duration start,
+  ) {
+    final url = prefs.videoTrack!.id;
+    final video = widget.videos.firstWhere(
+      (item) => (widget.isLocal ? item.originalUrl : item.url) == url,
+      orElse: () => _firstVid,
+    );
+    final series = widget.episode.manga.value?.name;
+    final episode = widget.episode.name;
+    final title = [series, episode]
+        .whereType<String>()
+        .where((value) => value.isNotEmpty)
+        .join(' · ');
+    return buildCastMedia(
+      url: url,
+      isLocal: widget.isLocal,
+      headers: prefs.headers,
+      title: title,
+      start: start,
+      subtitles: video.subtitles,
+    );
+  }
+
+  Future<void> _castLoad(VideoPrefs prefs, Duration start) async {
+    try {
+      final media = await _buildAnimeCastMedia(prefs, start);
+      if (mounted && _cast.isCasting) await _cast.load(media);
+    } catch (_) {}
+  }
+
+  void _onCastPosition() {
+    if (_cast.isCasting) _currentPosition.value = _cast.position.value;
+  }
+
+  void _onCastChanged() {
+    final casting = _cast.isCasting;
+    if (_wasCasting && !casting && mounted) {
+      unawaited(_player.seek(_cast.position.value));
+      _currentPosition.value = _cast.position.value;
+    }
+    _wasCasting = casting;
+  }
+
+  Future<void> _addAnimeToLibrary() async {
+    if (_addedAnimeToLibrary) return;
+    _addedAnimeToLibrary = true;
+    final mangaId = widget.episode.mangaId;
+    if (mangaId == null) return;
+    try {
+      final manga = await mangaRepository.findByIdAsync(mangaId);
+      if (manga == null || manga.favorite == true) return;
+      manga
+        ..favorite = true
+        ..dateAdded ??= DateTime.now().millisecondsSinceEpoch;
+      await mangaRepository.save(manga);
+    } catch (_) {
+      _addedAnimeToLibrary = false;
+    }
   }
 
   Future<void> _initAniSkip() async {
@@ -852,6 +973,11 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
     _tvVideoFocus.dispose();
     _tvPanelFocus.dispose();
     _watchStopwatch.stop();
+    _cast.removeListener(_onCastChanged);
+    _cast.position.removeListener(_onCastPosition);
+    unawaited(_castFinishedSub?.cancel());
+    unawaited(_castLocalPlayingSub?.cancel());
+    _cast.detach();
     _currentPosition.removeListener(_updateRpcTimestamp);
     _subDelayController.removeListener(onSubDelayChanged);
     _audioDelayController.removeListener(onAudioDelayChanged);

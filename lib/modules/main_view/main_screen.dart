@@ -121,6 +121,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
   static bool _isReadingScreen(String? location) {
     return location == '/mangaReaderView' ||
         location == '/animePlayerView' ||
+        location == '/stremioPlayer' ||
         location == '/novelReaderView';
   }
 
