@@ -55,6 +55,7 @@ import 'package:mangayomi/modules/main_view/main_screen.dart';
 import 'package:mangayomi/modules/history/history_screen.dart';
 import 'package:mangayomi/modules/library/library_screen.dart';
 import 'package:mangayomi/modules/stremio/movies_tv_screen.dart';
+import 'package:mangayomi/modules/stremio/stremio_addon_settings_page.dart';
 import 'package:mangayomi/modules/manga/detail/manga_detail_main.dart';
 import 'package:mangayomi/modules/manga/home/manga_home_screen.dart';
 import 'package:mangayomi/modules/manga/reader/reader_view.dart';
@@ -309,6 +310,10 @@ class RouterNotifier extends ChangeNotifier {
     _genericRoute<ItemType>(
       name: "SourceRepositories",
       builder: (itemType) => SourceRepositories(itemType: itemType),
+    ),
+    _genericRoute(
+      name: "stremioAddons",
+      child: const StremioAddonSettingsPage(),
     ),
     _genericRoute(name: "downloads", child: const DownloadsScreen()),
     _genericRoute(name: "dataAndStorage", child: const DataAndStorage()),
