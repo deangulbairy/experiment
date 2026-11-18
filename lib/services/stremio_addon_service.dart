@@ -232,6 +232,37 @@ class StremioStream {
 
   String get displayTitle => title.isNotEmpty ? title : name;
 
+  Map<String, dynamic> toStorageJson() => {
+    'addonName': addonName,
+    'name': name,
+    'title': title,
+    'url': url,
+    'infoHash': infoHash,
+    'fileIndex': fileIndex,
+    'trackers': trackers,
+    'headers': headers,
+  };
+
+  factory StremioStream.fromStorageJson(Map<String, dynamic> json) {
+    final rawHeaders = json['headers'];
+    return StremioStream(
+      addonName: json['addonName']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      url: json['url']?.toString(),
+      infoHash: json['infoHash']?.toString(),
+      fileIndex: int.tryParse(json['fileIndex']?.toString() ?? ''),
+      trackers: (json['trackers'] as List? ?? const [])
+          .map((value) => value.toString())
+          .toList(),
+      headers: rawHeaders is Map
+          ? rawHeaders.map(
+              (key, value) => MapEntry(key.toString(), value.toString()),
+            )
+          : null,
+    );
+  }
+
   factory StremioStream.fromJson(
     Map<String, dynamic> json, {
     required String addonName,
