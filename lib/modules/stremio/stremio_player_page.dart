@@ -15,6 +15,7 @@ import 'package:mangayomi/utils/platform_utils.dart';
 import 'package:mangayomi/utils/system_ui.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:shiori/shiori.dart';
 
 class StremioPlayerRequest {
   const StremioPlayerRequest({
@@ -300,7 +301,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.black87, Colors.transparent],
+                    colors: [ShioriScrim.panel, Colors.transparent],
                   ),
                 ),
                 child: Padding(
@@ -342,7 +343,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
             ),
           if (_error != null)
             ColoredBox(
-              color: Colors.black87,
+              color: ShioriScrim.panel,
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -400,7 +401,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.black87],
+                            colors: [Colors.transparent, ShioriScrim.panel],
                           ),
                         ),
                         child: Padding(
@@ -428,6 +429,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
                                     return Row(
                                       children: [
                                         IconButton(
+                                          tooltip: isPlaying ? 'Pause' : 'Play',
                                           color: Colors.white,
                                           onPressed: () => isPlaying
                                               ? _player.pause()

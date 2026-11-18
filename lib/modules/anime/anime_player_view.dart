@@ -64,6 +64,8 @@ import 'package:mangayomi/modules/anime/utils/always_on_top.dart';
 import 'package:mangayomi/modules/anime/utils/mpv_subtitle_options.dart';
 import 'package:mangayomi/modules/anime/widgets/video_filters_section.dart';
 
+part 'mixins/anime_player_cast_mixin.dart';
+
 class AnimePlayerView extends riv.ConsumerStatefulWidget {
   final int episodeId;
   const AnimePlayerView({super.key, required this.episodeId});
@@ -256,7 +258,8 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
         AnimeMpvBridgeMixin,
         AnimeTrackSelectionMixin,
         AnimePlayerSettingsMixin,
-        AnimePlayerControlsMixin {
+        AnimePlayerControlsMixin,
+        AnimePlayerCastMixin {
   @override
   VideoController get controlsVideoController => _controller;
   @override
@@ -283,6 +286,16 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
     controller: _cast,
     onPressed: _openCastSheet,
   );
+  @override
+  Player get castPlayer => _player;
+  @override
+  ValueNotifier<VideoPrefs?> get castVideo => _video;
+  @override
+  ValueNotifier<Duration> get castCurrentPosition => _currentPosition;
+  @override
+  vid.Video get castFallbackVideo => _firstVid;
+  @override
+  void Function(bool) get castPlaybackCompleted => _handlePlaybackCompleted;
   @override
   Player get mpvBridgePlayer => _player;
   @override
@@ -508,13 +521,8 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
 
   late final StreamSubscription<Duration> _currentPositionSub;
   late final StreamSubscription<String> _playerErrorSub;
-  StreamSubscription<void>? _castFinishedSub;
-  StreamSubscription<bool>? _castLocalPlayingSub;
   StreamSubscription<Tracks>? _tracksSub;
   StreamSubscription<Track>? _trackSub;
-  final CastController _cast = CastController.instance;
-  bool _wasCasting = false;
-  bool _addedAnimeToLibrary = false;
 
   late final StreamSubscription<Duration> _currentTotalDurationSub = _player
       .stream
@@ -825,108 +833,6 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
     unawaited(syncActiveSubtitleTrackFromMpv());
   }
 
-  void _initCast() {
-    _cast.attach();
-    _wasCasting = _cast.isCasting;
-    _cast.addListener(_onCastChanged);
-    _cast.position.addListener(_onCastPosition);
-    _castFinishedSub = _cast.onFinished.listen(
-      (_) => _handlePlaybackCompleted(true),
-    );
-    _castLocalPlayingSub = _player.stream.playing.listen((playing) {
-      if (playing) unawaited(_addAnimeToLibrary());
-      // Keep the phone's decoder quiet while the TV owns playback. The cast
-      // sheet remains the remote for play, pause, seeking, and volume.
-      if (playing && _cast.isCasting) unawaited(_player.pause());
-    });
-  }
-
-  void _openCastSheet() {
-    showCastSheet(
-      context,
-      controller: _cast,
-      onDeviceSelected: (device) {
-        Navigator.of(context).pop();
-        unawaited(_castToDevice(device));
-      },
-      onStopCasting: () => unawaited(_cast.end()),
-    );
-  }
-
-  Future<void> _castToDevice(CastDevice device) async {
-    final prefs = _video.value;
-    if (prefs?.videoTrack == null) return;
-    final wasPlaying = _player.state.playing;
-    await _player.pause();
-    final started = await _cast.start(
-      device,
-      () => _buildAnimeCastMedia(prefs!, _currentPosition.value),
-    );
-    if (!started && wasPlaying && mounted) await _player.play();
-  }
-
-  Future<CastMedia> _buildAnimeCastMedia(
-    VideoPrefs prefs,
-    Duration start,
-  ) {
-    final url = prefs.videoTrack!.id;
-    final video = widget.videos.firstWhere(
-      (item) => (widget.isLocal ? item.originalUrl : item.url) == url,
-      orElse: () => _firstVid,
-    );
-    final series = widget.episode.manga.value?.name;
-    final episode = widget.episode.name;
-    final title = [series, episode]
-        .whereType<String>()
-        .where((value) => value.isNotEmpty)
-        .join(' · ');
-    return buildCastMedia(
-      url: url,
-      isLocal: widget.isLocal,
-      headers: prefs.headers,
-      title: title,
-      start: start,
-      subtitles: video.subtitles,
-    );
-  }
-
-  Future<void> _castLoad(VideoPrefs prefs, Duration start) async {
-    try {
-      final media = await _buildAnimeCastMedia(prefs, start);
-      if (mounted && _cast.isCasting) await _cast.load(media);
-    } catch (_) {}
-  }
-
-  void _onCastPosition() {
-    if (_cast.isCasting) _currentPosition.value = _cast.position.value;
-  }
-
-  void _onCastChanged() {
-    final casting = _cast.isCasting;
-    if (_wasCasting && !casting && mounted) {
-      unawaited(_player.seek(_cast.position.value));
-      _currentPosition.value = _cast.position.value;
-    }
-    _wasCasting = casting;
-  }
-
-  Future<void> _addAnimeToLibrary() async {
-    if (_addedAnimeToLibrary) return;
-    _addedAnimeToLibrary = true;
-    final mangaId = widget.episode.mangaId;
-    if (mangaId == null) return;
-    try {
-      final manga = await mangaRepository.findByIdAsync(mangaId);
-      if (manga == null || manga.favorite == true) return;
-      manga
-        ..favorite = true
-        ..dateAdded ??= DateTime.now().millisecondsSinceEpoch;
-      await mangaRepository.save(manga);
-    } catch (_) {
-      _addedAnimeToLibrary = false;
-    }
-  }
-
   Future<void> _initAniSkip() async {
     // Waits for the media to buffer, which the reader can outlast.
     await _player.stream.buffer.first;
@@ -973,11 +879,7 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
     _tvVideoFocus.dispose();
     _tvPanelFocus.dispose();
     _watchStopwatch.stop();
-    _cast.removeListener(_onCastChanged);
-    _cast.position.removeListener(_onCastPosition);
-    unawaited(_castFinishedSub?.cancel());
-    unawaited(_castLocalPlayingSub?.cancel());
-    _cast.detach();
+    _disposeCast();
     _currentPosition.removeListener(_updateRpcTimestamp);
     _subDelayController.removeListener(onSubDelayChanged);
     _audioDelayController.removeListener(onAudioDelayChanged);
