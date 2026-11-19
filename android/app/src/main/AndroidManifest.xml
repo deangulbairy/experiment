@@ -72,6 +72,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="mangayomi" android:host="add-button" />
             </intent-filter>
+            <intent-filter android:label="Add Nuvio or Stremio add-on">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="nuvio" />
+                <data android:scheme="stremio" />
+            </intent-filter>
         </activity>
         <activity
             android:name="com.linusu.flutter_web_auth_2.CallbackActivity"

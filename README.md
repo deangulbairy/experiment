@@ -23,6 +23,9 @@ This fork keeps Mangayomi's manga, webtoon, comic, novel, and anime features, an
 - Add and remove add-ons by manifest URL; installed add-ons are saved on the device.
 - Browse movie and series catalogs, and use search or catalog filters when an add-on supports them.
 - Open title details and series episodes, then request streams from installed streaming add-ons.
+- Open `nuvio://` or `stremio://` install links; the app identifies whether the manifest is a Stremio add-on or native Nuvio plugin repository and asks before adding it.
+- Add native Nuvio plugin repositories separately in Browse settings. The app runs their JavaScript providers and shows returned movie/TV streams alongside Stremio add-on streams.
+- Configure provider settings when a Nuvio manifest declares them. A TMDB API key can be saved in Nuvio plugin settings to map IMDb catalog IDs to the TMDB IDs providers expect.
 - List series episodes in season and episode order, with the earliest episode first.
 - Episode stream results appear under the episode you select, with a visible loading state.
 - Play direct HTTP(S) streams and magnet/torrent streams in a full-screen player that uses the same video output as anime playback and shows playback errors instead of silently remaining black.
@@ -31,7 +34,7 @@ This fork keeps Mangayomi's manga, webtoon, comic, novel, and anime features, an
 - Cast anime, movies, and shows to a Chromecast on the same Wi-Fi network, with a playback remote and support for stream request headers.
 - Manage movie and TV add-on manifest URLs in Browse settings, alongside the Manga, Anime, and Novel repository controls.
 
-Stremio support currently covers movie and series catalogs, metadata, and streams. Catalogs and playable sources depend on the add-ons you install; add-ons that expose other Stremio resource types are not shown in this section.
+Stremio support currently covers movie and series catalogs, metadata, and streams. Catalogs and playable sources depend on the add-ons you install; add-ons that expose other Stremio resource types are not shown in this section. Nuvio providers run as on-device JavaScript scrapers; provider compatibility varies, and plugin-specific native APIs and WebAssembly are not implemented.
 
 On iOS, allow Mangayomi to access the local network when prompted so it can discover Chromecast devices. If discovery was denied, enable it under **Settings → Privacy & Security → Local Network**. Chromecast support is adapted from [IStoleThis/chromecast-testing](https://github.com/IStoleThis/chromecast-testing); see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 

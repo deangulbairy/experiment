@@ -407,10 +407,11 @@ class ElementCollection {
   }
 
   get(index) {
+    if (index === undefined) return this.elements;
     return this.elements[index] || new Stub();
   }
 
-  length() {
+  get length() {
     return this.elements.length;
   }
 

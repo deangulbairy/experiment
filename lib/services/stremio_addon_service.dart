@@ -171,6 +171,26 @@ class StremioMeta {
   String get releaseInfo => data['releaseInfo']?.toString() ?? '';
   String get runtime => data['runtime']?.toString() ?? '';
   String get type => data['type']?.toString() ?? '';
+  String? get tmdbId {
+    final ids = data['ids'];
+    final candidates = <dynamic>[
+      data['tmdbId'],
+      data['tmdb_id'],
+      data['tmdb'],
+      if (ids is Map) ids['tmdb'],
+      id,
+    ];
+    for (final candidate in candidates) {
+      final value = candidate?.toString().trim();
+      if (value == null || value.isEmpty) continue;
+      final match = RegExp(
+        r'^(?:tmdb:)?(?:movie:|series:|tv:)?(\d+)$',
+        caseSensitive: false,
+      ).firstMatch(value);
+      if (match != null) return match.group(1);
+    }
+    return null;
+  }
   List<String> get genres => (data['genres'] as List? ?? const [])
       .map((e) => e.toString())
       .toList();
@@ -278,8 +298,11 @@ class StremioStream {
     final hints = json['behaviorHints'];
     final proxyHeaders = hints is Map ? hints['proxyHeaders'] : null;
     final requestHeaders = proxyHeaders is Map ? proxyHeaders['request'] : null;
+    final rawHeaders = json['headers'];
     final headers = requestHeaders is Map
         ? requestHeaders.map((key, value) => MapEntry(key.toString(), value.toString()))
+        : rawHeaders is Map
+        ? rawHeaders.map((key, value) => MapEntry(key.toString(), value.toString()))
         : null;
     final sources = (json['sources'] as List? ?? const [])
         .whereType<String>()
@@ -292,16 +315,33 @@ class StremioStream {
         )
         .toList();
     final infoHash = json['infoHash']?.toString();
-    final url = json['url']?.toString();
+    final rawUrl = json['url'];
+    final urlData = rawUrl is Map ? rawUrl : null;
+    final url = urlData?['url']?.toString() ?? rawUrl?.toString();
+    final streamHeaders = headers ?? (urlData?['headers'] is Map
+        ? (urlData!['headers'] as Map).map(
+            (key, value) => MapEntry(key.toString(), value.toString()),
+          )
+        : null);
+    final quality = json['quality']?.toString();
+    final size = json['size']?.toString();
+    final language = json['language']?.toString();
+    final details = [
+      if (quality != null && quality.isNotEmpty) quality,
+      if (size != null && size.isNotEmpty) size,
+      if (language != null && language.isNotEmpty) language,
+    ].join(' · ');
+    final title = json['title']?.toString() ?? json['description']?.toString();
     return StremioStream(
       addonName: addonName,
-      name: json['name']?.toString() ?? '',
-      title: json['description']?.toString() ?? json['title']?.toString() ?? '',
+      name: json['name']?.toString() ?? json['provider']?.toString() ?? '',
+      title: [if (title != null && title.isNotEmpty) title, if (details.isNotEmpty) details]
+          .join(' · '),
       url: url,
       infoHash: infoHash,
       fileIndex: int.tryParse(json['fileIdx']?.toString() ?? ''),
       trackers: sources,
-      headers: headers,
+      headers: streamHeaders,
     );
   }
 }
@@ -353,7 +393,10 @@ class StremioAddonService {
 
   String normalizeManifestUrl(String value) {
     var input = value.trim();
-    if (input.startsWith('stremio://')) input = 'https://${input.substring(10)}';
+    input = input.replaceFirst(
+      RegExp(r'^(?:stremio|nuvio)://', caseSensitive: false),
+      'https://',
+    );
     final uri = Uri.tryParse(input);
     if (uri == null ||
         (uri.scheme != 'http' && uri.scheme != 'https') ||
@@ -362,7 +405,7 @@ class StremioAddonService {
     }
     final path = uri.path.isEmpty || uri.path.endsWith('/')
         ? '${uri.path}manifest.json'
-        : uri.path.endsWith('/manifest.json')
+        : uri.path.toLowerCase().endsWith('.json')
         ? uri.path
         : '${uri.path}/manifest.json';
     return uri.replace(path: path).toString();

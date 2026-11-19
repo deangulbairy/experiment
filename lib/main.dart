@@ -40,6 +40,8 @@ import 'package:mangayomi/l10n/l10n_delegates.dart';
 import 'package:mangayomi/utils/legacy_material.dart';
 import 'package:mangayomi/services/library_updater.dart';
 import 'package:mangayomi/services/sync_server.dart';
+import 'package:mangayomi/services/stremio_addon_service.dart';
+import 'package:mangayomi/services/nuvio_plugin_service.dart';
 import 'package:mangayomi/services/http/m_client.dart';
 import 'package:mangayomi/services/m_extension_server.dart';
 import 'package:mangayomi/services/download_manager/m_downloader.dart';
@@ -574,6 +576,73 @@ class _MyAppState extends ConsumerState<MyApp>
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) async {
       if (uri == lastUri) return; // Debouncing Deep Links
       lastUri = uri;
+      if (uri.scheme.toLowerCase() == 'nuvio' ||
+          uri.scheme.toLowerCase() == 'stremio') {
+        final context = navigatorKey.currentContext;
+        if (context == null || !context.mounted || uri.host.isEmpty) return;
+        try {
+          final stremioService = StremioAddonService();
+          final manifestUrl = stremioService.normalizeManifestUrl(
+            uri.toString(),
+          );
+          final manifest = await stremioService.fetchManifest(manifestUrl);
+          final scrapers = manifest['scrapers'];
+          final isNuvioRepository = scrapers is List && scrapers.isNotEmpty;
+          final displayName = manifest['name']?.toString() ?? uri.host;
+          final shouldAdd = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(
+                isNuvioRepository
+                    ? 'Add Nuvio plugin repository?'
+                    : 'Add Stremio add-on?',
+              ),
+              content: SelectableText(
+                isNuvioRepository
+                    ? '$displayName provides JavaScript stream scrapers. Only add repositories you trust.\n\n$manifestUrl'
+                    : 'This link will add the add-on from $displayName:\n$manifestUrl',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Add'),
+                ),
+              ],
+            ),
+          );
+          if (shouldAdd != true || !context.mounted) return;
+          if (isNuvioRepository) {
+            await NuvioPluginService.instance.addRepository(manifestUrl);
+          } else {
+            await stremioService.addManifestUrl(manifestUrl);
+          }
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  isNuvioRepository
+                      ? 'Nuvio plugin repository added.'
+                      : 'Stremio add-on added.',
+                ),
+              ),
+            );
+            await context.push(
+              isNuvioRepository ? '/nuvioPlugins' : '/stremioAddons',
+            );
+          }
+        } catch (error) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error.toString())),
+            );
+          }
+        }
+        return;
+      }
       switch (uri.host) {
         case "add-repo":
           final repoName = uri.queryParameters["repo_name"];

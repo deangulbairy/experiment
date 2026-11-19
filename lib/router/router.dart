@@ -56,6 +56,7 @@ import 'package:mangayomi/modules/history/history_screen.dart';
 import 'package:mangayomi/modules/library/library_screen.dart';
 import 'package:mangayomi/modules/stremio/movies_tv_screen.dart';
 import 'package:mangayomi/modules/stremio/stremio_addon_settings_page.dart';
+import 'package:mangayomi/modules/stremio/nuvio_plugin_settings_page.dart';
 import 'package:mangayomi/modules/stremio/stremio_player_page.dart';
 import 'package:mangayomi/modules/manga/detail/manga_detail_main.dart';
 import 'package:mangayomi/modules/manga/home/manga_home_screen.dart';
@@ -315,6 +316,10 @@ class RouterNotifier extends ChangeNotifier {
     _genericRoute(
       name: "stremioAddons",
       child: const StremioAddonSettingsPage(),
+    ),
+    _genericRoute(
+      name: "nuvioPlugins",
+      child: const NuvioPluginSettingsPage(),
     ),
     _genericRoute<StremioPlayerRequest>(
       name: "stremioPlayer",

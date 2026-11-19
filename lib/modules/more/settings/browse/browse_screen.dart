@@ -99,6 +99,13 @@ class BrowseSScreen extends ConsumerWidget {
                   trailing: const Icon(Symbols.chevron_forward_rounded),
                   onTap: () => context.push('/stremioAddons'),
                 ),
+              if (!animeOnly)
+                ShioriSettingRow(
+                  title: 'Nuvio plugin repositories',
+                  subtitle: 'Manage native Nuvio movie/TV scraper URLs',
+                  trailing: const Icon(Symbols.chevron_forward_rounded),
+                  onTap: () => context.push('/nuvioPlugins'),
+                ),
               ShioriSwitchRow(
                 title: l10n.check_for_extension_updates,
                 value: checkForExtensionUpdates,

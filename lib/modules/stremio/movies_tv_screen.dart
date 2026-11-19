@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shiori/shiori.dart';
 import 'package:mangayomi/modules/stremio/stremio_player_page.dart';
 import 'package:mangayomi/services/stremio_addon_service.dart';
+import 'package:mangayomi/services/nuvio_plugin_service.dart';
 
 class MoviesTvScreen extends StatefulWidget {
   const MoviesTvScreen({super.key});
@@ -169,6 +170,7 @@ class _MoviesTvScreenState extends State<MoviesTvScreen> {
   }
 
   void _manageAddons() => context.push('/stremioAddons');
+  void _manageNuvioPlugins() => context.push('/nuvioPlugins');
 
   @override
   Widget build(BuildContext context) {
@@ -190,6 +192,11 @@ class _MoviesTvScreenState extends State<MoviesTvScreen> {
             tooltip: 'Manage Stremio add-ons',
             onPressed: _manageAddons,
             icon: const Icon(Icons.extension_outlined),
+          ),
+          IconButton(
+            tooltip: 'Manage Nuvio plugin repositories',
+            onPressed: _manageNuvioPlugins,
+            icon: const Icon(Icons.code_rounded),
           ),
           IconButton(
             tooltip: 'Refresh',
@@ -448,6 +455,8 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
     String id,
     String title, {
     bool isEpisode = false,
+    int? season,
+    int? episode,
   }) async {
     final requestId = ++_streamRequestId;
     setState(() {
@@ -460,7 +469,7 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
     });
     try {
       final warnings = [...widget.addonWarnings];
-      final streams = await widget.service.loadStreams(
+      final addonStreams = await widget.service.loadStreams(
         widget.addons,
         widget.mediaType,
         id,
@@ -468,6 +477,28 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
           warnings.add('$addonName: $error');
         },
       );
+      var nuvioStreams = <StremioStream>[];
+      try {
+        final nuvio = NuvioPluginService.instance;
+        if ((await nuvio.installedRepositoryUrls()).isNotEmpty) {
+          final tmdbId = await nuvio.resolveTmdbId(widget.meta, widget.mediaType);
+          if (tmdbId == null) {
+            warnings.add(
+              'Nuvio providers need a TMDB ID. Add a TMDB API key in Nuvio plugin settings when this catalog only provides IMDb IDs.',
+            );
+          } else {
+            nuvioStreams = await nuvio.loadStreams(
+              tmdbId: tmdbId,
+              mediaType: widget.mediaType,
+              season: season,
+              episode: episode,
+            );
+          }
+        }
+      } catch (error) {
+        warnings.add('Nuvio plugins: $error');
+      }
+      final streams = [...addonStreams, ...nuvioStreams];
       if (!mounted || requestId != _streamRequestId) return;
       setState(() {
         _streams = streams;
@@ -476,7 +507,7 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
         if (streams.isEmpty) {
           _streamError = warnings.isEmpty
               ? 'No streams were returned. The installed streaming add-ons did not find a match.'
-              : 'No streams were returned. Add-on errors:\n${warnings.join('\n')}';
+              : 'No streams were returned. Source messages:\n${warnings.join('\n')}';
         }
       });
     } catch (error) {
@@ -649,6 +680,8 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
                                   episode.id,
                                   episode.label,
                                   isEpisode: true,
+                                  season: episode.season,
+                                  episode: episode.episode,
                                 ),
                       ),
                     ),
