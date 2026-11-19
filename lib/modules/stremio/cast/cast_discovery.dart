@@ -52,7 +52,7 @@ Stream<MdnsServiceInfo> bonsoirLookup(String serviceType) {
               if (service == null || controller.isClosed) return;
               final host = _preferReachableAddress(
                 service.hostAddresses,
-                hostname: service.host,
+                hostname: service.hostname,
               );
               if (host == null) return;
               controller.add(
