@@ -14,10 +14,10 @@
       "bundleIdentifier": "com.kodjodevf.mangayomi",
       "developerName": "deangulbairy",
       "subtitle": "Read manga and novels, watch anime, movies, and TV",
-      "version": "0.9.100",
-      "versionDate": "2026-11-19T01:22:51Z",
-      "versionDescription": "What's Changed\n* Fix Stremio playback, Chromecast, and Watch history by @deangulbairy in https://github.com/deangulbairy/experiment/pull/4\n\n\n**Full Changelog**: https://github.com/deangulbairy/experiment/compare/ios\u2022v0.9.99...ios\u2022v0.9.100",
-      "downloadURL": "https://github.com/deangulbairy/experiment/releases/download/ios-v0.9.100/Mangayomi-v0.9.100-ios.ipa",
+      "version": "0.9.101",
+      "versionDate": "2026-11-19T21:07:47Z",
+      "versionDescription": "What's Changed\n* Fix Stremio playback and Watch library behavior by @deangulbairy in https://github.com/deangulbairy/experiment/pull/5\n\n\n**Full Changelog**: https://github.com/deangulbairy/experiment/compare/ios\u2022v0.9.100...ios\u2022v0.9.101",
+      "downloadURL": "https://github.com/deangulbairy/experiment/releases/download/ios-v0.9.101/Mangayomi-v0.9.101-ios.ipa",
       "localizedDescription": "Mangayomi with Stremio-compatible movie and series catalogs, add-ons, and playback.",
       "iconURL": "https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/images/icons/icon_default.webp",
       "tintColor": "EF4444",
@@ -28,6 +28,13 @@
         "https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/images/screenshots/image_2_default.webp"
       ],
       "versions": [
+        {
+          "version": "0.9.101",
+          "date": "2026-11-19T21:07:47Z",
+          "localizedDescription": "What's Changed\n* Fix Stremio playback and Watch library behavior by @deangulbairy in https://github.com/deangulbairy/experiment/pull/5\n\n\n**Full Changelog**: https://github.com/deangulbairy/experiment/compare/ios\u2022v0.9.100...ios\u2022v0.9.101",
+          "downloadURL": "https://github.com/deangulbairy/experiment/releases/download/ios-v0.9.101/Mangayomi-v0.9.101-ios.ipa",
+          "size": 115922171
+        },
         {
           "version": "0.9.100",
           "date": "2026-11-19T01:22:51Z",
@@ -67,7 +74,7 @@
         ],
         "privacy": []
       },
-      "size": 115923243
+      "size": 115922171
     }
   ],
   "news": [
@@ -103,6 +110,17 @@
       "imageURL": "https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/images/news/update_default.webp",
       "notify": true,
       "url": "https://github.com/deangulbairy/experiment/releases/tag/ios-v0.9.100"
+    },
+    {
+      "appID": "com.kodjodevf.mangayomi",
+      "title": "ios-v0.9.101 - 19 Nov",
+      "identifier": "release-ios-v0.9.101",
+      "caption": "An update for the Stremio-enabled Mangayomi fork is available!",
+      "date": "2026-11-19T21:07:47Z",
+      "tintColor": "EF4444",
+      "imageURL": "https://raw.githubusercontent.com/deangulbairy/experiment/refs/heads/main/repo/images/news/update_default.webp",
+      "notify": true,
+      "url": "https://github.com/deangulbairy/experiment/releases/tag/ios-v0.9.101"
     }
   ]
 }
