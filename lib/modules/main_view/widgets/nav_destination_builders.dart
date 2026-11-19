@@ -90,7 +90,7 @@ class NavDestinationBuilders {
         ),
         label: Padding(
           padding: const EdgeInsets.only(top: ShioriSpace.s4),
-          child: Text(l10n.activity),
+          child: const Text('Watch'),
         ),
       );
     }
@@ -300,7 +300,7 @@ class NavDestinationBuilders {
           icon: const Icon(Symbols.notifications_rounded),
           ref: ref,
         ),
-        label: l10n.activity,
+        label: 'Watch',
       );
     }
     if (dest.contains("_enableLibSwitch")) {

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riv;
 import 'package:mangayomi/services/discord_rpc.dart';
 import 'package:mangayomi/repositories/chapter_repository.dart';
+import 'package:mangayomi/repositories/manga_repository.dart';
 import 'package:mangayomi/models/chapter.dart';
 import 'package:mangayomi/models/custom_button.dart';
 import 'package:mangayomi/models/settings.dart';
@@ -17,6 +18,10 @@ import 'package:mangayomi/modules/anime/mixins/anime_mpv_bridge_mixin.dart';
 import 'package:mangayomi/modules/anime/mixins/anime_player_controls_mixin.dart';
 import 'package:mangayomi/modules/anime/mixins/anime_player_settings_mixin.dart';
 import 'package:mangayomi/modules/anime/mixins/anime_track_selection_mixin.dart';
+import 'package:dart_cast/dart_cast.dart' show CastDevice, CastMedia;
+import 'package:mangayomi/modules/stremio/cast/cast_controller.dart';
+import 'package:mangayomi/modules/stremio/cast/cast_media_builder.dart';
+import 'package:mangayomi/modules/stremio/cast/cast_sheet.dart';
 import 'package:mangayomi/modules/anime/providers/anime_player_controller_provider.dart';
 import 'package:mangayomi/modules/anime/providers/auto_play_next_provider.dart';
 import 'package:mangayomi/modules/anime/utils/playback_media.dart';
@@ -58,6 +63,8 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:mangayomi/modules/anime/utils/always_on_top.dart';
 import 'package:mangayomi/modules/anime/utils/mpv_subtitle_options.dart';
 import 'package:mangayomi/modules/anime/widgets/video_filters_section.dart';
+
+part 'mixins/anime_player_cast_mixin.dart';
 
 class AnimePlayerView extends riv.ConsumerStatefulWidget {
   final int episodeId;
@@ -251,7 +258,8 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
         AnimeMpvBridgeMixin,
         AnimeTrackSelectionMixin,
         AnimePlayerSettingsMixin,
-        AnimePlayerControlsMixin {
+        AnimePlayerControlsMixin,
+        AnimePlayerCastMixin {
   @override
   VideoController get controlsVideoController => _controller;
   @override
@@ -273,6 +281,21 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
   @override
   VoidCallback get controlsOpenTvSettingsPanel =>
       () => setState(() => _tvSettingsOpen = true);
+  @override
+  Widget get controlsCastAction => CastButton(
+    controller: _cast,
+    onPressed: _openCastSheet,
+  );
+  @override
+  Player get castPlayer => _player;
+  @override
+  ValueNotifier<VideoPrefs?> get castVideo => _video;
+  @override
+  ValueNotifier<Duration> get castCurrentPosition => _currentPosition;
+  @override
+  vid.Video get castFallbackVideo => _firstVid;
+  @override
+  void Function(bool) get castPlaybackCompleted => _handlePlaybackCompleted;
   @override
   Player get mpvBridgePlayer => _player;
   @override
@@ -741,6 +764,7 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
     _completed;
     // ignore: unnecessary_statements
     _currentTotalDurationSub;
+    _initCast();
     loadAndroidFont().then((_) {
       if (!mounted) return;
       _openMedia(_video.value!, _streamController.getCurrentPosition());
@@ -785,6 +809,7 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
   Future<void> _openMedia(VideoPrefs prefs, [Duration? position]) async {
     final start = position ?? _currentPosition.value;
     resetAudioFallbackState(resetRequestedLanguage: true);
+    final casting = _cast.isCasting;
     await _player.open(
       playbackMedia(
         prefs.videoTrack!.id,
@@ -792,7 +817,9 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
         httpHeaders: prefs.headers,
         start: start,
       ),
+      play: !casting,
     );
+    if (casting) unawaited(_castLoad(prefs, start));
     if (start > Duration.zero) {
       unawaited(
         _player.stream.duration
@@ -852,6 +879,7 @@ class _AnimeStreamPageState extends riv.ConsumerState<AnimeStreamPage>
     _tvVideoFocus.dispose();
     _tvPanelFocus.dispose();
     _watchStopwatch.stop();
+    _disposeCast();
     _currentPosition.removeListener(_updateRpcTimestamp);
     _subDelayController.removeListener(onSubDelayChanged);
     _audioDelayController.removeListener(onAudioDelayChanged);

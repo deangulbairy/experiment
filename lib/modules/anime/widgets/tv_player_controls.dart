@@ -29,6 +29,7 @@ class TvPlayerControls extends StatefulWidget {
     required this.onBack,
     required this.onRestart,
     required this.onSettings,
+    required this.castAction,
     required this.hasNext,
     required this.onNext,
     required this.qualityListenable,
@@ -44,6 +45,7 @@ class TvPlayerControls extends StatefulWidget {
   final VoidCallback onBack;
   final VoidCallback onRestart;
   final VoidCallback onSettings;
+  final Widget castAction;
   final bool hasNext;
   final VoidCallback? onNext;
   // Quality = the source video list (e.g. "1080p Sub"/"1080p Dub") — the real
@@ -277,6 +279,7 @@ class _TvPlayerControlsState extends State<TvPlayerControls> {
                               ],
                             ),
                           ),
+                          widget.castAction,
                           TvFocusable(
                             accent: accent,
                             onPressed: widget.onRestart,

@@ -20,7 +20,7 @@ bool isGroupedNavRoute(WidgetRef ref, String route) {
 String navGroupTitle(BuildContext context, String route) =>
     switch (NavGroup.of(route)) {
       NavGroup.library => context.l10n.library,
-      NavGroup.activity => context.l10n.activity,
+      NavGroup.activity => 'Watch',
       _ => '',
     };
 

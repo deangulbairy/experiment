@@ -46,6 +46,7 @@ mixin AnimePlayerControlsMixin<T extends riv.ConsumerStatefulWidget>
   VoidCallback get controlsChangeFitLabel;
   Future<void> Function(bool isFullscreen) get controlsToggleFullscreen;
   VoidCallback get controlsOpenTvSettingsPanel;
+  Widget get controlsCastAction;
 
   bool _playAfterOverlay = false;
 
@@ -180,6 +181,7 @@ mixin AnimePlayerControlsMixin<T extends riv.ConsumerStatefulWidget>
           openPlayerSettings(context);
         }
       },
+      castAction: controlsCastAction,
       hasNext: controlsHasNextEpisode,
       onNext: controlsHasNextEpisode
           ? () => mpvPushToNewEpisode(
@@ -443,6 +445,7 @@ mixin AnimePlayerControlsMixin<T extends riv.ConsumerStatefulWidget>
         wideActions: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            controlsCastAction,
             if (supportsAlwaysOnTop)
               IconButton(
                 tooltip: context.l10n.always_on_top,
@@ -467,6 +470,7 @@ mixin AnimePlayerControlsMixin<T extends riv.ConsumerStatefulWidget>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              controlsCastAction,
               KeyedSubtree(
                 key: const ValueKey('mobile-player-portrait-episodes'),
                 child: episodesButton(),

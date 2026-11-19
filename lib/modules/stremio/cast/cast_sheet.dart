@@ -193,7 +193,8 @@ class _DeviceList extends StatelessWidget {
               )
             : const Text(
                 'No Chromecast found. Check that this device and the TV are on '
-                'the same Wi-Fi network, then search again.',
+                'the same Wi-Fi network. On iPhone, also allow Mangayomi in '
+                'Settings > Privacy & Security > Local Network, then search again.',
               ),
       );
     }

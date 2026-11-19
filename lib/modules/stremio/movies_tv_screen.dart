@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shiori/shiori.dart';
 import 'package:mangayomi/modules/stremio/stremio_player_page.dart';
 import 'package:mangayomi/services/stremio_addon_service.dart';
 
@@ -360,26 +361,26 @@ class _MetaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(ShioriShape.card),
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(ShioriShape.cover),
               child: SizedBox(
                 width: double.infinity,
                 child: meta.poster.isEmpty
-                    ? const ColoredBox(
-                        color: Colors.black12,
+                    ? ColoredBox(
+                        color: context.shiori.color.ink1,
                         child: Center(child: Icon(Icons.movie_outlined, size: 40)),
                       )
                     : Image.network(
                         meta.poster,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const ColoredBox(
-                          color: Colors.black12,
+                        errorBuilder: (context, _, _) => ColoredBox(
+                          color: context.shiori.color.ink1,
                           child: Center(child: Icon(Icons.broken_image_outlined)),
                         ),
                       ),
@@ -470,22 +471,21 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
   }
 
   Future<void> _play(StremioStream stream) async {
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute<void>(
-        builder: (_) => StremioPlayerPage(
-          stream: stream,
-          title: _selectedVideoTitle ?? widget.meta.name,
-          mediaType: widget.mediaType,
-          mediaId: widget.mediaType == StremioMediaType.series
-              ? _selectedEpisodeId ?? widget.meta.id
-              : widget.meta.id,
-          parentId: widget.meta.id,
-          parentTitle: widget.meta.name,
-          poster: widget.meta.poster,
-          episodeTitle: widget.mediaType == StremioMediaType.series
-              ? _selectedVideoTitle
-              : null,
-        ),
+    await context.push(
+      '/stremioPlayer',
+      extra: StremioPlayerRequest(
+        stream: stream,
+        title: _selectedVideoTitle ?? widget.meta.name,
+        mediaType: widget.mediaType,
+        mediaId: widget.mediaType == StremioMediaType.series
+            ? _selectedEpisodeId ?? widget.meta.id
+            : widget.meta.id,
+        parentId: widget.meta.id,
+        parentTitle: widget.meta.name,
+        poster: widget.meta.poster,
+        episodeTitle: widget.mediaType == StremioMediaType.series
+            ? _selectedVideoTitle
+            : null,
       ),
     );
   }
@@ -548,7 +548,7 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
             children: [
               if (meta.poster.isNotEmpty)
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(ShioriShape.cover),
                   child: Image.network(
                     meta.poster,
                     width: 120,
