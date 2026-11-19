@@ -180,7 +180,7 @@ class _HistoryTabState extends ConsumerState<HistoryTab>
             widget.itemType == ItemType.anime && widget.query.isEmpty;
         final mediaShelf = showMoviesAndTv
             ? <Widget>[
-                const SliverToBoxAdapter(child: StremioContinueShelf()),
+                const SliverToBoxAdapter(child: WatchContinueShelf()),
               ]
             : <Widget>[];
         if (entries.isNotEmpty) {

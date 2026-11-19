@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:mangayomi/modules/browse/providers/browse_initial_tab_provider.dart';
 import 'package:mangayomi/modules/browse/browse_screen.dart';
@@ -15,6 +17,7 @@ import 'package:mangayomi/modules/library/widgets/library_entry_utils.dart';
 import 'package:mangayomi/modules/widgets/cover_grid_skeleton.dart';
 import 'package:mangayomi/modules/widgets/error_state.dart';
 import 'package:mangayomi/modules/library/widgets/library_update_runner.dart';
+import 'package:mangayomi/services/stremio_library_service.dart';
 import 'package:mangayomi/providers/l10n_providers.dart';
 import 'package:mangayomi/utils/extensions/manga_extensions.dart';
 import 'package:shiori/shiori.dart';
@@ -125,7 +128,7 @@ class LibraryBody extends ConsumerWidget {
           // A search or a filter that matches nothing is not an empty
           // library; say which it is.
           final narrowed = searchQuery.isNotEmpty || data.isNotEmpty;
-          return ShioriEmptyState(
+          final emptyState = ShioriEmptyState(
             icon: narrowed
                 ? Symbols.search_off_rounded
                 : Symbols.collections_bookmark_rounded,
@@ -142,6 +145,10 @@ class LibraryBody extends ConsumerWidget {
                     context.go('/browse');
                   },
           );
+          if (itemType == ItemType.anime && !narrowed) {
+            return _AnimeLibraryEmptyState(child: emptyState);
+          }
+          return emptyState;
         }
 
         final entriesManga = reverse
@@ -203,6 +210,53 @@ class LibraryBody extends ConsumerWidget {
                   : 0.69,
             ),
     );
+  }
+}
+
+/// The anime tab also contains Stremio movies and shows. Don't show an
+/// "Empty library" panel under those saved watch items when the anime grid
+/// itself has no favorites.
+class _AnimeLibraryEmptyState extends StatefulWidget {
+  const _AnimeLibraryEmptyState({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_AnimeLibraryEmptyState> createState() =>
+      _AnimeLibraryEmptyStateState();
+}
+
+class _AnimeLibraryEmptyStateState extends State<_AnimeLibraryEmptyState> {
+  final _service = StremioLibraryService.instance;
+  bool _loaded = false;
+  bool _hasWatchItems = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _service.addListener(_refresh);
+    unawaited(_refresh());
+  }
+
+  @override
+  void dispose() {
+    _service.removeListener(_refresh);
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    final entries = await _service.getEntries();
+    if (!mounted) return;
+    setState(() {
+      _loaded = true;
+      _hasWatchItems = entries.isNotEmpty;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded || _hasWatchItems) return const SizedBox.shrink();
+    return widget.child;
   }
 }
 

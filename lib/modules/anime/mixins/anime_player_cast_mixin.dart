@@ -12,6 +12,7 @@ mixin AnimePlayerCastMixin on riv.ConsumerState<AnimeStreamPage> {
   StreamSubscription<bool>? _castLocalPlayingSub;
   bool _wasCasting = false;
   bool _addedAnimeToLibrary = false;
+  Future<void>? _addingAnimeToLibrary;
 
   void _initCast() {
     _cast.attach();
@@ -108,18 +109,36 @@ mixin AnimePlayerCastMixin on riv.ConsumerState<AnimeStreamPage> {
 
   Future<void> _addAnimeToLibrary() async {
     if (_addedAnimeToLibrary) return;
-    _addedAnimeToLibrary = true;
-    final mangaId = widget.episode.mangaId;
-    if (mangaId == null) return;
+    final inFlight = _addingAnimeToLibrary;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
+    final save = _saveAnimeToLibrary();
+    _addingAnimeToLibrary = save;
     try {
-      final manga = await mangaRepository.findByIdAsync(mangaId);
-      if (manga == null || manga.favorite == true) return;
-      manga
-        ..favorite = true
-        ..dateAdded ??= DateTime.now().millisecondsSinceEpoch;
-      await mangaRepository.save(manga);
+      await save;
+    } finally {
+      _addingAnimeToLibrary = null;
+    }
+  }
+
+  Future<void> _saveAnimeToLibrary() async {
+    try {
+      final mangaId = widget.episode.mangaId ?? widget.episode.manga.value?.id;
+      if (mangaId == null) return;
+      final manga = await mangaRepository.findByIdAsync(mangaId) ??
+          widget.episode.manga.value;
+      if (manga == null) return;
+      if (manga.favorite != true || manga.dateAdded == null) {
+        manga
+          ..favorite = true
+          ..dateAdded ??= DateTime.now().millisecondsSinceEpoch;
+        await mangaRepository.save(manga);
+      }
+      _addedAnimeToLibrary = true;
     } catch (_) {
-      _addedAnimeToLibrary = false;
+      // Leave it retryable if playback emits another start event.
     }
   }
 }

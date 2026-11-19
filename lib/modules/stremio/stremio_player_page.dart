@@ -86,6 +86,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
   String? _error;
   String? _torrentHash;
   String? _playbackUrl;
+  Map<String, String>? _playbackHeaders;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   StreamSubscription<Duration>? _positionSubscription;
@@ -147,11 +148,31 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
       if (url.isEmpty) {
         throw const StremioAddonException('This stream does not contain a playable URL.');
       }
+      var playbackHeaders = <String, String>{...?stream.headers};
+      if (url.startsWith(RegExp(r'https?://'))) {
+        final sourceUri = Uri.parse(url);
+        url = await StremioAddonService().resolveStreamUrl(
+          url,
+          headers: playbackHeaders,
+        );
+        final resolvedUri = Uri.tryParse(url);
+        if (resolvedUri != null && sourceUri.origin != resolvedUri.origin) {
+          playbackHeaders.removeWhere(
+            (key, _) => const {
+              'authorization',
+              'cookie',
+              'proxy-authorization',
+              'host',
+            }.contains(key.toLowerCase()),
+          );
+        }
+      }
       _playbackUrl = url;
+      _playbackHeaders = playbackHeaders.isEmpty ? null : playbackHeaders;
       await _player.open(
         Media(
           url,
-          httpHeaders: stream.headers,
+          httpHeaders: _playbackHeaders,
           start: widget.initialPosition,
         ),
         play: true,
@@ -207,7 +228,7 @@ class _StremioPlayerPageState extends State<StremioPlayerPage> {
       () => buildCastMedia(
         url: url,
         isLocal: false,
-        headers: widget.stream.headers,
+        headers: _playbackHeaders ?? widget.stream.headers,
         title: widget.title,
         start: _position,
       ),
