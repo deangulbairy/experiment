@@ -224,46 +224,7 @@ jobs:
       - name: Build debug iOS
         run: flutter build ios --debug --no-codesign
 
-      - name: Upload iOS debug artifact
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: Mangayomi-ios-debug
-          path: build/ios/iphoneos/Runner.app
-
-  build-ios-preview-ipa:
-    name: Build (iOS beta IPA)
-    runs-on: macos-26-intel
-    env:
-      # Match the iOS release build toolchain, but only upload an artifact.
-      CARGOKIT_TOOLCHAIN: "1.99.1"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4.4.0
-        with:
-          persist-credentials: false
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2.23.0
-        with:
-          channel: stable
-          architecture: x64
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.CARGOKIT_TOOLCHAIN }}
-          targets: aarch64-apple-ios,x86_64-apple-ios
-
-      - name: Setup Rust cache
-        uses: Swatinem/rust-cache@v2.9.3
-        with:
-          workspaces: rust
-          cache-on-failure: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build and package unsigned beta IPA
+      - name: Package unsigned beta IPA
         shell: bash
         run: |
           set -euo pipefail
@@ -273,13 +234,12 @@ jobs:
             exit 1
           fi
 
-          flutter build ios --release --no-codesign --verbose
           mkdir -p build/ios/iphoneos/Payload
           mv build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
           ipa="build/ios/iphoneos/Mangayomi-v${version}-pr${{ github.event.pull_request.number }}-preview.ipa"
           (cd build/ios/iphoneos && zip -qr "$(basename "$ipa")" Payload)
 
-      - name: Upload beta IPA artifact
+      - name: Upload iOS beta IPA artifact
         uses: actions/upload-artifact@v4.6.2
         with:
           name: Mangayomi-ios-beta-pr-${{ github.event.pull_request.number }}
