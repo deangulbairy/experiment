@@ -687,9 +687,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   NavGroupSwitcher(route: route),
-                  ContinueShelf(itemType: widget.itemType),
                   if (widget.itemType == ItemType.anime)
-                    const StremioContinueShelf(),
+                    const WatchContinueShelf()
+                  else
+                    ContinueShelf(itemType: widget.itemType),
                   ActiveFilterChips(
                     itemType: widget.itemType,
                     settings: _settings,

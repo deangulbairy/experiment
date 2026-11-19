@@ -90,7 +90,7 @@ class NavDestinationBuilders {
         ),
         label: Padding(
           padding: const EdgeInsets.only(top: ShioriSpace.s4),
-          child: const Text('Watch'),
+          child: Text(l10n.activity),
         ),
       );
     }
@@ -122,17 +122,17 @@ class NavDestinationBuilders {
             : null,
         selectedIcon: navTooltipIcon(
           showTooltip,
-          l10n.double_tap_search_hint('Watch'),
+          l10n.double_tap_search_hint(l10n.anime),
           const Icon(Symbols.video_library_rounded),
         ),
         icon: navTooltipIcon(
           showTooltip,
-          l10n.double_tap_search_hint('Watch'),
+          l10n.double_tap_search_hint(l10n.anime),
           const Icon(Symbols.video_library_rounded),
         ),
         label: Padding(
           padding: const EdgeInsets.only(top: ShioriSpace.s4),
-          child: const Text('Watch'),
+          child: Text(l10n.anime),
         ),
       );
     }
@@ -300,7 +300,7 @@ class NavDestinationBuilders {
           icon: const Icon(Symbols.notifications_rounded),
           ref: ref,
         ),
-        label: 'Watch',
+        label: l10n.activity,
       );
     }
     if (dest.contains("_enableLibSwitch")) {
@@ -322,8 +322,8 @@ class NavDestinationBuilders {
       destinations[dest.indexOf("/AnimeLibrary")] = NavigationDestination(
         selectedIcon: const Icon(Symbols.video_library_rounded),
         icon: const Icon(Symbols.video_library_rounded),
-        label: 'Watch',
-        tooltip: showTooltip ? l10n.double_tap_search_hint('Watch') : '',
+        label: l10n.anime,
+        tooltip: showTooltip ? l10n.double_tap_search_hint(l10n.anime) : '',
       );
     }
     if (dest.contains("/NovelLibrary")) {

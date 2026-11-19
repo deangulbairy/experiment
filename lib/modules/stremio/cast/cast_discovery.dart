@@ -50,7 +50,10 @@ Stream<MdnsServiceInfo> bonsoirLookup(String serviceType) {
             case BonsoirDiscoveryServiceResolvedEvent():
               final BonsoirService? service = event.service;
               if (service == null || controller.isClosed) return;
-              final host = _preferReachableAddress(service.hostAddresses);
+              final host = _preferReachableAddress(
+                service.hostAddresses,
+                hostname: service.hostname,
+              );
               if (host == null) return;
               controller.add(
                 MdnsServiceInfo(
@@ -76,7 +79,10 @@ Stream<MdnsServiceInfo> bonsoirLookup(String serviceType) {
 
 /// A Chromecast is reached over a plain TLS socket, which can't take an IPv6
 /// link-local address without a scope id, so prefer IPv4.
-String? _preferReachableAddress(List<String> addresses) {
+String? _preferReachableAddress(
+  List<String> addresses, {
+  String? hostname,
+}) {
   for (final address in addresses) {
     if (InternetAddress.tryParse(address)?.type == InternetAddressType.IPv4) {
       return address;
@@ -89,6 +95,12 @@ String? _preferReachableAddress(List<String> addresses) {
       return address;
     }
   }
-  return null;
+  final host = hostname?.trim();
+  if (host == null || host.isEmpty) return null;
+  final parsedHost = InternetAddress.tryParse(host);
+  if (parsedHost != null) return parsedHost.address;
+  // Bonjour can resolve the SRV record before returning A/AAAA addresses.
+  // Keep its local hostname as a fallback so the socket layer can resolve it.
+  return host.replaceFirst(RegExp(r'\.$'), '');
 }
 

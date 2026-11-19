@@ -15,6 +15,7 @@ class _MoviesTvScreenState extends State<MoviesTvScreen> {
   final _service = StremioAddonService();
   final _searchController = TextEditingController();
   List<StremioAddon> _addons = const [];
+  List<String> _addonWarnings = const [];
   List<StremioCatalog> _catalogs = const [];
   List<StremioMeta> _items = const [];
   StremioCatalog? _selectedCatalog;
@@ -41,7 +42,12 @@ class _MoviesTvScreenState extends State<MoviesTvScreen> {
       _error = null;
     });
     try {
-      final addons = await _service.loadAddons();
+      final addonWarnings = <String>[];
+      final addons = await _service.loadAddons(
+        onAddonError: (manifestUrl, error) {
+          addonWarnings.add('$manifestUrl: $error');
+        },
+      );
       final catalogs = _service.catalogs(addons, _type);
       final selected = catalogs.firstWhere(
         (catalog) => catalog.addon.id == 'com.linvo.cinemeta' && catalog.id == 'top',
@@ -55,6 +61,7 @@ class _MoviesTvScreenState extends State<MoviesTvScreen> {
       if (!mounted) return;
       setState(() {
         _addons = addons;
+        _addonWarnings = addonWarnings;
         _catalogs = catalogs;
         _selectedCatalog = selected;
         _filterValue = filterValue;
@@ -154,6 +161,7 @@ class _MoviesTvScreenState extends State<MoviesTvScreen> {
           meta: meta,
           mediaType: _type,
           addons: _addons,
+          addonWarnings: _addonWarnings,
           service: _service,
         ),
       ),
@@ -413,12 +421,14 @@ class StremioDetailsPage extends StatefulWidget {
     required this.meta,
     required this.mediaType,
     required this.addons,
+    this.addonWarnings = const [],
     required this.service,
   });
 
   final StremioMeta meta;
   final StremioMediaType mediaType;
   final List<StremioAddon> addons;
+  final List<String> addonWarnings;
   final StremioAddonService service;
 
   @override
@@ -427,6 +437,7 @@ class StremioDetailsPage extends StatefulWidget {
 
 class _StremioDetailsPageState extends State<StremioDetailsPage> {
   List<StremioStream> _streams = const [];
+  List<String> _streamWarnings = const [];
   String? _streamError;
   String? _selectedVideoTitle;
   String? _selectedEpisodeId;
@@ -445,20 +456,27 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
       _loadingStreams = true;
       _streamError = null;
       _streams = const [];
+      _streamWarnings = const [];
     });
     try {
+      final warnings = [...widget.addonWarnings];
       final streams = await widget.service.loadStreams(
         widget.addons,
         widget.mediaType,
         id,
+        onAddonError: (addonName, error) {
+          warnings.add('$addonName: $error');
+        },
       );
       if (!mounted || requestId != _streamRequestId) return;
       setState(() {
         _streams = streams;
+        _streamWarnings = warnings;
         _loadingStreams = false;
         if (streams.isEmpty) {
-          _streamError =
-              'No streams were returned. Add a Stremio streaming add-on from the extension button.';
+          _streamError = warnings.isEmpty
+              ? 'No streams were returned. The installed streaming add-ons did not find a match.'
+              : 'No streams were returned. Add-on errors:\n${warnings.join('\n')}';
         }
       });
     } catch (error) {
@@ -521,6 +539,15 @@ class _StremioDetailsPageState extends State<StremioDetailsPage> {
                     onTap: () => _play(stream),
                   ),
                 )),
+            if (_streamWarnings.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Some add-ons could not be checked:\n${_streamWarnings.join('\n')}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ],
           ],
         ],
       ),

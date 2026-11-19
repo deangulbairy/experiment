@@ -224,11 +224,32 @@ jobs:
       - name: Build debug iOS
         run: flutter build ios --debug --no-codesign
 
-      - name: Upload iOS debug artifact
+      - name: Package unsigned beta IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version: \([^+]*\).*/\1/p' pubspec.yaml)"
+          base_build_number="$(sed -n 's/^version: [^+]*+\([0-9]*\).*/\1/p' pubspec.yaml)"
+          if [[ -z "$version" || ! "$base_build_number" =~ ^[0-9]+$ ]]; then
+            echo "Could not read the app version from pubspec.yaml" >&2
+            exit 1
+          fi
+          preview_build_number=$((base_build_number + GITHUB_RUN_NUMBER))
+
+          flutter build ios --debug --no-codesign \
+            --build-name "$version" \
+            --build-number "$preview_build_number"
+          mkdir -p build/ios/iphoneos/Payload
+          mv build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
+          ipa="build/ios/iphoneos/Mangayomi-v${version}-b${preview_build_number}-pr${{ github.event.pull_request.number }}-preview.ipa"
+          (cd build/ios/iphoneos && zip -qr "$(basename "$ipa")" Payload)
+
+      - name: Upload iOS beta IPA artifact
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: Mangayomi-ios-debug
-          path: build/ios/iphoneos/Runner.app
+          name: Mangayomi-ios-beta-pr-${{ github.event.pull_request.number }}
+          path: build/ios/iphoneos/Mangayomi-*-preview.ipa
+          retention-days: 14
 
   build-macos:
     name: Build (macOS debug)

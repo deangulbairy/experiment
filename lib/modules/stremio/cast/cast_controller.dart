@@ -115,7 +115,7 @@ class CastController extends ChangeNotifier {
     _status = CastStatus.searching;
     notifyListeners();
 
-    const timeout = Duration(seconds: 8);
+    const timeout = Duration(seconds: 15);
     try {
       _discoverySub = _service
           .startDiscovery(
